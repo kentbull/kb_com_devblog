@@ -1,0 +1,25 @@
+{% set image_meta = get_image_metadata(path=path) %}
+
+{% set width   = width   | default(value=image_meta.width) %}
+{% set height  = height  | default(value=image_meta.height) %}
+{% set op      = op      | default(value='fit_width') %}
+{% set format  = format  | default(value='avif') %}
+{% set quality = quality | default(value=85) %}
+
+{% set img     = resize_image(
+                   path=path, 
+                   width=width, 
+                   height=height, 
+                   op=op,
+                   format=format, 
+                   quality=quality) %}
+
+<figure class="float-right">
+  <img src="{{ img.url }}"
+       width="{{ img.width }}"
+       height="{{ img.height }}"
+       alt="{{ alt | default(value="") }}"
+       loading="lazy"
+       decoding="async">
+  {% if body %}<figcaption>{{ body | safe }}</figcaption>{% endif %}
+</figure>

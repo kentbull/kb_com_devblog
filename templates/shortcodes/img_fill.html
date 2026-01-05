@@ -1,0 +1,30 @@
+{% set image_meta = get_image_metadata(path=path) %}
+
+{% set width   = width   | default(value=image_meta.width) %}
+{% set height  = height  | default(value=image_meta.height) %}
+{% set op      = op      | default(value='fill') %}
+{% set format  = format  | default(value="avif") %}
+{% set quality = quality | default(value=85) %}
+
+{% set extra_class = class | default(value="") %}
+
+{% set img = resize_image(
+    path=path,
+    width=width,
+    height=height,
+    op=op,
+    format=format,
+    quality=quality
+) %}
+
+<figure class="img-fill">
+  <img src="{{ img.url }}"
+       style="aspect-ratio: {{ img.width }} / {{ img.height }};"
+       width="{{ img.width }}"
+       height="{{ img.height }}"
+       alt="{{ alt | default(value="") }}"
+       class="{{ extra_class }}"
+       loading="lazy"
+       decoding="async">
+  {% if body %}<figcaption>{{ body | safe }}</figcaption>{% endif %}
+</figure>
