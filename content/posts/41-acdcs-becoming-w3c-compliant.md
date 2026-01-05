@@ -21,16 +21,3 @@ There are more technical details such as the one-way transformation of an ACDC t
 
 This does not mean ACDCs are using RDF, what JSON-LD uses. It just means ACDCs can export to JSON-LD as needed to be consumed by targets that require JSON-LD. Targets compatible with the core ACDC spec need not worry about JSON-LD at all.
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

@@ -18,16 +18,3 @@ I disagree with and do not endorse the model used for the Fabric Token SDK origi
 
 The lack of an agent based communication protocol for the F(STM) module in their model is a major shortcoming.
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

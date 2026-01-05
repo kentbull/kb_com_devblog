@@ -26,7 +26,12 @@ Say you want to learn KERI, what is your first step? Reading the white paper, al
 
 How can you come up to speed on all of the important IETF Draft Specifications around and important to KERI? Use the following pie graph and chart as a map:
 
-![keri-reading-chart](/images/05-keri-mind-map-01.webp)
+{% image(path="/images/posts/05-keri-mind-map-01.webp", class="diagram",
+    op="fit_width",
+    alt="KERI Reading Mind Map Chart") 
+%}
+KERI Reading Mind Map
+{% end %}
 
 ## Guided Tour
 1. The KERI whitepaper, the KERI IETF Draft spec, and the did:keri spec make up 51% of the required reading yet read the whitepaper first and then come back to read the KERI IETF Draft spec at the end after all of the other reading since the KERI IETF Draft spec includes items from the ACDC and CESR specs.

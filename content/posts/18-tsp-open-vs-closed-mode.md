@@ -23,16 +23,3 @@ Allow all packets to be padded to a uniform size. SPAC already has no metadata a
 
 HPKE Sam considers experimental because they are not more vetted, such as making sure all loops are uniform in the code to protect against side channel attacks. You need an implementation that is written by a cryptographic programmer.
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

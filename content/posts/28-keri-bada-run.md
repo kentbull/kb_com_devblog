@@ -114,16 +114,3 @@ Purpose: securely manage endpoint data created by a Principal Controller.
 
 [show exchange of both /end/role and /loc/scheme messages in response to OOBI share or authorization]
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

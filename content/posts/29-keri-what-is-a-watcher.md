@@ -15,16 +15,3 @@ comment = true
 
 In direct mode every controller is also a watcher of any controller it directly interacts with it because it verifies controller KELs and events. Direct mode is actually the first mode that was implemented in KERIpy. And the KERIpy codebase grew around using much of the direct mode verification functionality for everything in order to get a product out quickly for GLEIF, yet there are corner cases for indirect mode that are not addressed by direct mode. The direct mode code is not generalizable thus the need to
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

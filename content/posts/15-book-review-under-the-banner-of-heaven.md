@@ -26,16 +26,3 @@ The desire to escape this connection to darkness, to make oneself clean and spot
 
 Couching this murder story in a modest historical scaffold of Mormonism from the time of Joseph Smith through to Brigham Young and beyond to modern fundamentalist Mormons enables Krakauer’s presentation of the Lafferty’s choices to be read in their historical and cultural context where from the reader can gain at the very least some sensible comprehension of where Lafferty brothers drew their beliefs from. Anything beyond a simple tracing of their belief systems would require a deeper work yet  this book sits comfortably readable at this level of analysis.
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

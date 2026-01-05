@@ -30,16 +30,3 @@ EUTxO though provides a model for scaling payment transactions as well as smart 
 
 And to the desire to “add a ton more functionality for less cost vs. any other type of transaction network” I disagree with that because of the inherent constraint of the account based model mentioned above. EVM is not a scaling model and is not a low-cost model, not with the current design of the EVM. Rather, using EUTxO provides a scalable smart contract model that sets us up for a future EUTxO to EVM compatibility layer to be able to bridge to anything in the EVM space while still having a core that is fast and programmable.
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

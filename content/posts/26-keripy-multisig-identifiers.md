@@ -33,16 +33,3 @@ Use of Exchange messages in multisig group – everyone broadcasts exchange mess
 
 INDEXED SIGNATURES! Make sure to describe the indexing schema, ordering, encoding, and decoding for indexed primitives. Indexed primitives are most important in the context of multisig since multiple signatures occur only with multisig operations. Thus understanding indexed primitives is a requirement.
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

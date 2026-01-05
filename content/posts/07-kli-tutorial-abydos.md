@@ -93,42 +93,60 @@ Our Explorer team includes the following cast of characters.
 
 Richard the Explorer!
 
-{% image(path="/images/posts/07-abydos-richard.png", class="diagram",
-    op="fit_width",
-    alt="") 
+{% img_left(path="/images/posts/07-abydos-richard.png",
+    width=100, height=100,
+    alt="Richard the Explorer", op="fit_width") 
     %}
-Image
+Richard the Explorer
 {% end %}
 
 Elayne the Librarian!
 
-{% image(path="/images/posts/07-abydos-elayne.png", class="diagram",
-    op="fit_width",
-    alt="") 
+{% img_left(path="/images/posts/07-abydos-elayne.png",
+    width=100, height=100,
+    alt="Elayne the Librarian", op="fit_width") 
     %}
-Image
+Elayne the Librarian
 {% end %}
 
 The ATHENA team includes:
 
 Ramiel the Wise Man
 
-{% image(path="/images/posts/07-abydos-ramiel.png", class="diagram",
-    op="fit_width",
-    alt="") 
+{% img_left(path="/images/posts/07-abydos-ramiel.png",
+    width=100, height=100,
+    alt="Ramiel the Wise Man", op="fit_width") 
     %}
-Image
+Ramiel the Wise Man
 {% end %}
 
 Zaqiel the Gatekeeper
 
-{% image(path="/images/posts/07-abydos-zaqiel.png", class="diagram",
-    op="fit_width",
-    alt="") 
+{% img_left(path="/images/posts/07-abydos-zaqiel.png",
+    width=100, height=100,
+    alt="Zaqiel the Gatekeeper", op="fit_width") 
     %}
-Image
+Zaqiel the Gatekeeper
 {% end %}
 
+
+
+<hr/>
+
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
+<br/>
 Now that you’ve met the team let’s get going. We have a lot to do!
 
 ## Outline

@@ -15,16 +15,3 @@ comment = true
 
 What are notifications in the Python implementation of KERI and KERIA, when do they occur, and why are they used? This article answers those questions.
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

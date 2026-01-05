@@ -28,16 +28,3 @@ cool things you can do with it
 
 You can use an authentic communication channel between known, non-private parties to establish a confidential, private communication channel between unknown, unrelated parties.
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

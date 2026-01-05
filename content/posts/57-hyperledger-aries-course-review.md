@@ -48,16 +48,3 @@ Using the VON network was very helpful in getting me up and off the ground for C
 
 The genesis file makes sense. Can or should it be stored in IPFS?
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull

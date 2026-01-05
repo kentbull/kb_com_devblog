@@ -27,16 +27,3 @@ Should you choose to accept this mission here are your training challenges:
 5. Read through all the KERI specs and whitepapers listed on my [KERI Start](https://kentbull.com/2022/06/05/keri-start/) blog post.
 6. Look through the Universal Identifiers Theory whitepaper and the other resources in the keri.one website: [https://keri.one/keri-resources/](https://keri.one/keri-resources/)
 
-### Share this:
-
-- Click to share on X (Opens in new window)
-				X
-- Click to share on Facebook (Opens in new window)
-				Facebook
-- 
-
-Categories: [Uncategorized](https://kentbull.com/category/uncategorized/)
-
-Tagged as: [temp-publish](https://kentbull.com/tag/temp-publish/)
-
-### Kent Bull
