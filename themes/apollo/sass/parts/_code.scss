@@ -178,7 +178,8 @@ pre {
 
   code {
     background-color: transparent !important;
-    color: var(--text-color);
+    // Don't set color here - let syntax highlighting CSS control it
+    // color: var(--text-color);
     font-size: 100%;
     padding: 0;
     border: none;
