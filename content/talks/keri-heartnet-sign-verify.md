@@ -8,7 +8,7 @@ video = { link = "https://www.youtube.com/watch?v=JOElSA5U8KQ", thumbnail = "ima
 
 [extra.organizer]
 name = "KERI Tutorial Series"
-link = "https://kentbull.com/2023/01/27/kli-tutorial-heartnet/"
+link = "https://www.kentbull.com/2023/01/27/kli-tutorial-heartnet/"
 +++
 
 The first installment of the KERI Tutorial Series focused on the KERI command line interface. This tutorial demonstrates how to establish trust between two parties, create KERI identifiers with witness networks, perform out-of-band introductions (OOBIs), complete challenge-response authentication, and sign/verify messages using KERI's end-verifiable secure attribution.

@@ -22,7 +22,7 @@ comment = true
 Abydos entrance
 {% end %}
 
-Welcome to the latest installment in the KERI Tutorial Series! In a [prior article](https://kentbull.com/2023/01/27/keri-tutorial-series-kli-sign-and-verify-with-heartnet/) we learned how to use KERI to sign and verify simple messages. This tutorial goes to the full depth of issuing and verifying credentials (ACDCs).
+Welcome to the latest installment in the KERI Tutorial Series! In a [prior article](https://www.kentbull.com/2023/01/27/keri-tutorial-series-kli-sign-and-verify-with-heartnet/) we learned how to use KERI to sign and verify simple messages. This tutorial goes to the full depth of issuing and verifying credentials (ACDCs).
 
 We outfit our team of explorers bound on a treasure hunting journey with high tech security tags so the Gatekeeper will recognize them and permit them entrance into the most rewarding, yet dangerous, caverns of the secret underground chambers beneath the Osireion at Abydos.
 
@@ -218,7 +218,7 @@ Check your environment-specific platform installation instructions for additiona
 
 Thanks to Jim Martin for providing these Windows instructions.
 
-See the [Manual Setup with Windows](https://kentbull.com/2023/01/27/keri-tutorial-series-kli-sign-and-verify-with-heartnet/#windows-manual-setup) section of the KLI with Heartnet tutorial for instructions on setting up KERI on Windows.
+See the [Manual Setup with Windows](https://www.kentbull.com/2023/01/27/keri-tutorial-series-kli-sign-and-verify-with-heartnet/#windows-manual-setup) section of the KLI with Heartnet tutorial for instructions on setting up KERI on Windows.
 
 #### Jump to the end with the `workflow.sh` script
 
@@ -298,7 +298,7 @@ The webhook is a simple HTTP server built on the [ioflo/hio](https://github.com/
 
 ## Foundational Vocabulary and Theory
 
-Next we cover some basic vocabulary and acronyms so you can make your way through this post. I recommend you review Nuttawut Kongsuwan’s KERI jargon [summary](https://medium.com/finema/keri-jargon-in-a-nutshell-part-1-fb554d58f9d0#de18) of the KERI whitepaper for an overview of the terminology in the space. You can always go to the [KERI Whitepaper](https://github.com/SmithSamuelM/Papers/blob/master/whitepapers/KERI_WP_2.x.web.pdf) or my [KERI Mind Map blog post](https://kentbull.com/2022/06/05/keri-start/) as well for a list of documents central to the KERI space that will assist you in gaining a full understanding of the concepts and the terminology.
+Next we cover some basic vocabulary and acronyms so you can make your way through this post. I recommend you review Nuttawut Kongsuwan’s KERI jargon [summary](https://medium.com/finema/keri-jargon-in-a-nutshell-part-1-fb554d58f9d0#de18) of the KERI whitepaper for an overview of the terminology in the space. You can always go to the [KERI Whitepaper](https://github.com/SmithSamuelM/Papers/blob/master/whitepapers/KERI_WP_2.x.web.pdf) or my [KERI Mind Map blog post](https://www.kentbull.com/2022/06/05/keri-start/) as well for a list of documents central to the KERI space that will assist you in gaining a full understanding of the concepts and the terminology.
 
 [KERI](https://medium.com/finema/keri-jargon-in-a-nutshell-part-1-fb554d58f9d0#48aa) – Key Event Receipt Infrastructure. A decentralized public key infrastructure for self certifying identifiers aiming at security as a top priority while following the design principle of “minimally sufficient means.” The foundation for the verifiable credentials technology called authentic chained data containers.
 
