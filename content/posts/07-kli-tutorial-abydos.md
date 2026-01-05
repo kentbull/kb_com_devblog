@@ -89,65 +89,33 @@ Your job is to make this all happen.
 
 ## Characters
 
-Our Explorer team includes the following cast of characters.
+Our Explorer team includes the following cast of characters:
 
-Richard the Explorer!
-
-{% img_left(path="/images/posts/07-abydos-richard.png",
-    width=100, height=100,
-    alt="Richard the Explorer", op="fit_width") 
-    %}
-Richard the Explorer
-{% end %}
-
-Elayne the Librarian!
-
-{% img_left(path="/images/posts/07-abydos-elayne.png",
-    width=100, height=100,
-    alt="Elayne the Librarian", op="fit_width") 
-    %}
-Elayne the Librarian
-{% end %}
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; max-width: 400px; margin: 1.5rem 0;">
+  <div style="text-align: center;">
+    <img src="/images/posts/07-abydos-richard.png" alt="Richard the Explorer" style="width: 100px; height: 100px; object-fit: contain;">
+    <p style="margin-top: 0.5rem; font-weight: bold;">Richard the Explorer</p>
+  </div>
+  <div style="text-align: center;">
+    <img src="/images/posts/07-abydos-elayne.png" alt="Elayne the Librarian" style="width: 100px; height: 100px; object-fit: contain;">
+    <p style="margin-top: 0.5rem; font-weight: bold;">Elayne the Librarian</p>
+  </div>
+</div>
 
 The ATHENA team includes:
 
-Ramiel the Wise Man
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; max-width: 400px; margin: 1.5rem 0;">
+  <div style="text-align: center;">
+    <img src="/images/posts/07-abydos-ramiel.png" alt="Ramiel the Wise Man" style="width: 100px; height: 100px; object-fit: contain;">
+    <p style="margin-top: 0.5rem; font-weight: bold;">Ramiel the Wise Man</p>
+  </div>
+  <div style="text-align: center;">
+    <img src="/images/posts/07-abydos-zaqiel.png" alt="Zaqiel the Gatekeeper" style="width: 100px; height: 100px; object-fit: contain;">
+    <p style="margin-top: 0.5rem; font-weight: bold;">Zaqiel the Gatekeeper</p>
+  </div>
+</div>
 
-{% img_left(path="/images/posts/07-abydos-ramiel.png",
-    width=100, height=100,
-    alt="Ramiel the Wise Man", op="fit_width") 
-    %}
-Ramiel the Wise Man
-{% end %}
-
-Zaqiel the Gatekeeper
-
-{% img_left(path="/images/posts/07-abydos-zaqiel.png",
-    width=100, height=100,
-    alt="Zaqiel the Gatekeeper", op="fit_width") 
-    %}
-Zaqiel the Gatekeeper
-{% end %}
-
-
-
-<hr/>
-
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-<br/>
-Now that you’ve met the team let’s get going. We have a lot to do!
+Now that you've met the team let's get going. We have a lot to do!
 
 ## Outline
 

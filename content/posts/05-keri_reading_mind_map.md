@@ -29,7 +29,7 @@ How can you come up to speed on all of the important IETF Draft Specifications a
 {% image(path="/images/posts/05-keri-mind-map-01.webp", class="diagram",
     op="fit_width",
     alt="KERI Reading Mind Map Chart") 
-%}
+    %}
 KERI Reading Mind Map
 {% end %}
 
@@ -58,7 +58,9 @@ Print and select “Save as PDF” for each of the IETF Draft Specifications loc
 
 All things KERI may be found on the KERI One website where you will also find the bio of the following character, Dr. Samuel A. Smith, the creator and inventor of KERI.
 
-{{ character(name="sam", body="Hello! I'm Sam!") }}
+{% character(name="sam") %}
+Hello! I'm Sam!
+{% end %}
 
 To meet Dr. Smith in person, and many other illustrious members of the SSI community join us at the next, as of the time of the first writing of this article, Internet Identity Workshop this November 15th to the 17th.
 
