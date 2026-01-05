@@ -30,11 +30,21 @@ A MetaMask wallet connected to the Binance Smart Chain network
 
 To connect the wallet to the pNetwork dApp here: https://dapp.ptokens.io/prvn-on-bsc
 
-![pRVN in Metamask](/images/prvn-wallet-01.png)
+{% image(path="/images/posts/01-prvn-bridge-1.png", class="diagram",
+    op="fit_width",
+    alt="pRVN in Metamask") 
+    %}
+pRVN in Metamask
+{% end %}
 
 Next you generate a new deposit address and send your Ravencoin to the deposit address. This is the point you stop and check in with yourself on how much you trust the process, the people involved, and evaluate your risk profile. Once you send the RVN then it is in a custodial wallet and you are relying on the pNetwork team to custody the funds. This sort of custodial relationship even exists with renBTC and other similar tools even though ren uses validator nodes.
 
-![generate address](/images/prvn-wallet-02.png)
+{% image(path="/images/posts/01-prvn-bridge-2.png", class="diagram",
+    op="fit_width",
+    alt="Generate deposit address") 
+    %}
+Generate deposit address
+{% end %}
 
 Such an ask may seem standard play for those that are already familiar with DeFi this process. For those Ravencoin holders unfamiliar with this part of the DeFi ecosystem I point you towards the next article in this series where I explain in depth the mechanisms involved and talk you through it with an overview video.
 

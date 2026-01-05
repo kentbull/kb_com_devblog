@@ -16,39 +16,19 @@ template = "homepage.html"
 .homepage-hero-subtitle {
     font-size: 1.25rem;
     margin-bottom: 1rem;
-
+}
 </style>
 
 <div class="homepage-hero">
-    <h1 class="homepage-hero-title">Apollo</h1>
-    <p class="homepage-hero-subtitle">A modern and minimalistic blog theme powered by Zola.</p>
+    <h1 class="homepage-hero-title">Kent Bull</h1>
+    <p class="homepage-hero-subtitle">My professional blog on KERI, decentralized identity, and software development.</p>
 </div>
 
-# Features
+# Topics
 
-- [Light, dark, and auto themes](@/posts/configuration.md#theme-mode-theme)
-- [Projects page](@/projects/_index.md)
-- [Talks page](https://not-matthias.github.io/talks/)
-- [Analytics (GoatCounter, Umami)](@/posts/configuration.md#analytics)
-- [Social media links](@/posts/configuration.md#socials)
-- [MathJax rendering](@/posts/math-symbol.md)
-- [Taxonomies](/apollo/tags)
-- [Custom homepage](@/posts/custom-homepage.md)
-- [Comments](@/posts/configuration.md#comments-comment)
-- [Search functionality](@/posts/configuration.md#search-build-search-index)
-- [Characters](@/posts/configuration.md#character-shortcodes)
+- **KERI & ACDC** - Key Event Receipt Infrastructure and Authentic Chained Data Containers
+- **Decentralized Identity** - Self-sovereign identity, DIDs, and verifiable credentials
+- **Software Development** - Technical tutorials and insights
+- **Personal** - Thoughts on life, community, and growth
 
-Checkout all the [options you can configure](@/posts/configuration.md) and the [example pages](@/posts/_index.md).
-
-# Quick Start
-
-1.  **Add the theme as a submodule:**
-    ```bash
-    git submodule add https://github.com/not-matthias/apollo themes/apollo
-    ```
-2.  **Configure your `config.toml`:**
-    Set `theme = "apollo"` and add your site's configuration.
-3.  **Start the Zola server:**
-    ```bash
-    zola serve
-    ```
+[Browse all posts](/posts/) | [View by tags](/tags/)

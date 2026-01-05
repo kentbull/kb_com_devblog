@@ -14,7 +14,12 @@ comment = true
 
 A $RVN-backed stable coin is officially on its way! Members of the [Ravencoin](https://ravencoin.org) ([RVN](https://www.coingecko.com/en/coins/ravencoin)) community and the OpenDAO team are partnering up to enable Ravencoin holders to essentially stake their RVN for a `$RVN` stable coin through a bridging mechanism to enable usage of this `$RVN` stable coin in the DeFi ecosystem. The culmination of this partnership and the efforts of the OpenDAO team brings additional liquidity and utility to all Ravencoin holders.
 
-![](/images/ravencoin-opendao.jpeg)
+{% image(path="/images/posts/00-ravencoin-opendao.jpeg", class="full-width",
+    op="fit_width",
+    alt="Ravencoin and OpenDAO Partnership") 
+    %}
+Ravencoin and OpenDAO Partnership
+{% end %}
 
 ## What is OpenDAO
 
