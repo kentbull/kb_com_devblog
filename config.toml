@@ -43,7 +43,7 @@ repo_url = "https://github.com/kentbull/kent_bull_blog/tree/main/content/"
 
 socials = [
     { name = "twitter",  url = "https://twitter.com/kentbull",        icon = "twitter"  },
-    { name = "github",   url = "https://github.com/not-kentbull/",    icon = "github"   },
+    { name = "github",   url = "https://github.com/kentbull/",        icon = "github"   },
     { name = "linkedin", url = "https://www.linkedin.com/in/kobull/", icon = "linkedin" },
 ]
 menu = [
