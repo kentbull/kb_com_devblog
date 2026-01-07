@@ -48,6 +48,5 @@ jobs:
           set -euo pipefail
 
           rsync -az --delete-delay --delay-updates \
-            -e "ssh -o IdentitiesOnly=yes" \
             public/ \
             "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
