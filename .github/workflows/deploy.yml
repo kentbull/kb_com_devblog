@@ -1,57 +1,52 @@
-# GitHub Actions workflow for deploying Zola site to GitHub Pages
-name: Deploy to GitHub Pages
+name: Deploy (rsync)
 
 on:
-  # Runs on pushes targeting the default branch
   push:
-    branches: ["master"]
-  
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+    branches: [ master ]
+  workflow_dispatch: {}
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive  # Fetch themes if using git submodules
-          fetch-depth: 0         # Fetch all history for .GitInfo and .Lastmod
 
       - name: Install Zola
         uses: taiki-e/install-action@v2
         with:
           tool: zola@0.21.0
 
-      - name: Build site
+      - name: Build
         run: zola build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Start SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          path: ./public
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
 
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Add server to known_hosts
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }} # e.g. kentbull.com or IP
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
+      - name: Deploy via rsync
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }} # deploy
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }} # /var/www/kentbull.com/html
+        run: |
+          set -euo pipefail
+
+          rsync -az --delete-delay --delay-updates \
+            -e "ssh -o IdentitiesOnly=yes" \
+            public/ \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/"
