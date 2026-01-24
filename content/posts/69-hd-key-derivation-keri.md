@@ -14,22 +14,43 @@ Understanding how cryptographic keys are deterministically derived in KERI is es
 
 ## Overview: The Key Derivation Pipeline
 
-At a high level, the key derivation process follows this pipeline:
+KERI uses two related but distinct derivation processes. Understanding this separation is critical:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         KEY DERIVATION PIPELINE                             │
+│                    KEYSTORE INITIALIZATION (kli init)                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│   User Passcode (21+ chars) Ex: thisismysecretkeyseed                       │
+│   User Passcode (21+ chars)              Keystore Salt                      │
+│         │                                (--salt or auto-generated)         │
+│         ▼                                      │                            │
+│   ┌─────────────┐                              │                            │
+│   │    Bran     │  "0A" + "A" + passcode[0:21] │                            │
+│   └──────┬──────┘                              │                            │
+│          │                                     │                            │
+│          ▼                                     │                            │
+│   ┌─────────────┐                              │                            │
+│   │   Salter    │  + empty path ("")           │                            │
+│   │             │  + tier                      │                            │
+│   └──────┬──────┘                              │                            │
+│          │                                     │                            │
+│          ▼                                     │                            │
+│   ┌─────────────┐                              ▼                            │
+│   │    AEID     │  Non-transferable     ┌─────────────┐                     │
+│   │   Signer    │  identifier for   ───►│  Encrypted  │                     │
+│   │             │  encrypt/decrypt      │   Storage   │                     │
+│   └─────────────┘                       │ (ks/gbls/   │                     │
+│                                         │    salt)    │                     │
+│                                         └─────────────┘                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    AID KEY DERIVATION (kli incept/rotate)                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   Keystore Salt (decrypted using AEID from bran)                            │
 │         │                                                                   │
 │         ▼                                                                   │
-│   ┌─────────────┐                                                           │
-│   │    Bran     │  "0A" + "A" + passcode[0:21]                              │
-│   │  (qb64 salt)│  Example: "0AAthisismysecretkeyseed"                      │
-│   └──────┬──────┘                                                           │
-│          │                                                                  │
-│          ▼                                                                  │
 │   ┌─────────────┐                                                           │
 │   │   Salter    │  Base64 decode → 16 raw bytes                             │
 │   │ (128-bit)   │  Used as Argon2id salt parameter                          │
@@ -52,9 +73,11 @@ At a high level, the key derivation process follows this pipeline:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
+**Key insight:** The user's passcode (bran) is **never** used directly for AID key derivation. It only creates the AEID used to encrypt/decrypt the keystore salt. The actual AID keys come from the keystore salt combined with derivation paths.
+
 ## The Bran: Your Master Secret
 
-The "bran" is a subset of the user-provided string along with the "0AA" prefix explained below that serves as the root entropy for all derived keys. The user-provided portion of the bran is often labeled as "passcode" in the KERI ecosystem.
+The "bran" is a subset of the user-provided string along with the "0AA" prefix explained below. The user-provided portion of the bran is often labeled as "passcode" in the KERI ecosystem. While the bran is your master secret, it does **not** directly derive AID keys. Instead, it creates the AEID (Authentication and Encryption ID) used to protect the keystore salt, which in turn derives the actual AID keys.
 
 A bran is composed of, in order, a type code on the front (`"0A"`), a filler "zero" character (`"A"`), and the first twenty one characters of the user-provided passcode string. Concatenating all these parts together forms a string like `"0AAthisismysecretkeyseed"` and constitutes a valid [CESR][CESR] cryptographic key seed. The construction process shown below is used to create a CESR data structure, specifically a cryptographic seed.
 
@@ -78,7 +101,10 @@ The reason the type code "0A" is prefixed on the front of the cryptographic seed
 
 ## The Salter: Managing Your Salt
 
-To take this cryptographic seed, this bran, and make keys from it a class called the `Salter` class is used. The `Salter` class wraps the bran and provides the Argon2id key stretching functionality:
+The `Salter` class wraps a qb64-encoded salt and provides the Argon2id key stretching functionality. It is used in two contexts:
+
+1. **AEID creation:** Wraps the bran and stretches it with an empty path to create the AEID
+2. **AID key derivation:** Wraps the keystore salt and stretches it with derivation paths to create AID keys
 
 ```python
 # KERIpy - signing.py
@@ -88,12 +114,12 @@ class Salter(Matter):
     Its .raw is random salt, .code as cipher suite for salt
     """
     def __init__(self, raw=None, code=MtrDex.Salt_128, tier=None, **kwa):
-        # Decode qb64 bran to get 16 raw bytes
+        # Decode qb64 salt to get 16 raw bytes
         super(Salter, self).__init__(raw=raw, code=code, **kwa)
         self.tier = tier if tier is not None else Tiers.low
 ```
 
-The Salter extracts the 16 raw bytes from the qb64-encoded bran and stores the security tier for later stretching operations.
+The Salter extracts the 16 raw bytes from the qb64-encoded salt and stores the security tier for later stretching operations.
 
 ## The Path: Deterministic Key Indexing
 
