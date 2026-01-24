@@ -56,7 +56,7 @@ At a high level, the key derivation process follows this pipeline:
 
 The "bran" is a subset of the user-provided string along with the "0AA" prefix explained below that serves as the root entropy for all derived keys. The user-provided portion of the bran is often labeled as "passcode" in the KERI ecosystem.
 
-A bran is composed of, in order, a type code on the front ("0A"), a filler "zero" character ("A"), and the first twenty one characters of the user-provided passcode string. Concatenating all these parts together forms a string like "0AAthisismysecretkeyseed" and constitutes a valid [CESR][CESR] cryptographic key seed. The construction process shown below is used to create a CESR data structure, specifically a cryptographic seed.
+A bran is composed of, in order, a type code on the front (`"0A"`), a filler "zero" character (`"A"`), and the first twenty one characters of the user-provided passcode string. Concatenating all these parts together forms a string like `"0AAthisismysecretkeyseed"` and constitutes a valid [CESR][CESR] cryptographic key seed. The construction process shown below is used to create a CESR data structure, specifically a cryptographic seed.
 
 ### Bran Construction
 
@@ -189,7 +189,7 @@ Notice how the path evolves as indices grow:
 
 #### Critical Insight: Paths Are Generated, Not Parsed
 
-A key point from [GitHub Discussion #929](https://github.com/WebOfTrust/keripy/discussions/929) is that the no-separator design guarantees **collision-free paths within a KEL**, but does NOT make paths parseable without context.
+A key point from [GitHub Discussion #929][GHDiscuss929] is that the no-separator design guarantees **collision-free paths within a KEL**, but does NOT make paths parseable without context.
 
 **The Problem**: Given just a path string like `"039"`, you cannot determine the components:
 - Is it `stem="0"`, `ridx=3`, `kidx=9` (a 3-key multisig after 2 rotations)?
@@ -235,7 +235,7 @@ The generation algorithm walks the KEL sequentially:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                    KEY GENERATION ALGORITHM                                  │
+│                    KEY GENERATION ALGORITHM (pseudocode)                     │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  Given: bran, stem, tier, KEL                                                │
@@ -255,7 +255,7 @@ The generation algorithm walks the KEL sequentially:
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key Takeaway**: The no-separator path design works because you always have the KEL context when recovering keys. The mathematical proof in Discussion #929 ensures that within any valid KEL, no two establishment events can ever produce the same path - this prevents key collisions, not parsing ambiguity.
+**Key Takeaway**: The no-separator path design works because you always have the KEL context when recovering keys. The mathematical proof in [Discussion #929][GHDiscuss929] ensures that within any valid KEL, no two establishment events can ever produce the same path - this prevents key collisions, not parsing ambiguity.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -359,7 +359,7 @@ The key index (`kidx`) grows as keys are generated:
 
 A common question is: "Without a delimiter between ridx and kidx in the path, won't there be ambiguity?" For example, couldn't path `"111"` mean either `ridx=1, kidx=11` or `ridx=11, kidx=1`?
 
-The answer is **no**, and here's why (as explained in [GitHub Discussion #929](https://github.com/WebOfTrust/keripy/discussions/929)):
+The answer is **no**, and here's why (as explained in [GitHub Discussion #929][GHDiscuss929]):
 
 ### Mathematical Proof of Unambiguity
 
@@ -440,37 +440,29 @@ Let's trace through the actual implementation for generating a key based on the 
 The general flow for the KLI in KERIpy is this:
 
 ### Keystore Initialization - setting the seed and salt
-- A passcode and a salt may both be specified to `kli init`. Not specifying a salt means one will be auto-generated and used.
-- `passcode` to salt (`Salter`)
-  - Using the KLI the user types in their passcode for `kli init`. A salt may also be specified if the user wants to deterministically generate keys rather than use a random salt, which would randomize the keys for a given keystore.
-  - The passcode is passed to the `bran` argument. This then goes to `Habery.__init__`, and then `Habery.setup`
-  - `Habery.setup` truncates the bran to 21 chars and prefixes `0AA` on the front of it to make it a valid Ed25519 cryptographic seed.
-  - The keystore-level global salt is received or generated and stored as the value in the `ks/gbls/salt` LMDB key/value pair.
-  - This seed is turned into a `core.Salter` 
-  
-- Salt used as basis for key generation
-  - The salt is used to generate a signing key (private key) using `pysodium.crypto_pwhash` to derive (by streching)
-    - `""` default path of a blank string 
-    - `0AAthisismysecretkeyseed` bran passed in
-    - `low/med/high` security tier
-  - The output of the `crypto_pwhash` becomes the set of bytes used as a cryptographic seed in a `Signer` object.    
-- This first Signer object is used as both the 
-  - `seed` for the keystore manager `Manager` object
-  - `aeid` - Authentication and Encription AID that is used to encrypt and decrypt the cryptographic seeds for each AID stored in a given keystore.
-- This means that during key creation later the seed and salt set during keystore initialization will be used as components of the key generation for inception and rotation.
+- A passcode and a salt may both be specified to `kli init`. Not specifying a `--salt` means one will be auto-generated.
+- **Two distinct secrets are established:**
+  1. **AEID (from bran):** The passcode is passed to the `bran` argument → `Habery.__init__` → `Habery.setup`. The bran is truncated to 21 chars and prefixed with `0AA` to form a valid CESR seed. This is stretched with an **empty path** (`""`) to create a `Signer` whose:
+     - Private key becomes the `seed` for the keystore `Manager`
+     - Public key becomes the `aeid` (Authentication and Encryption AID) used to encrypt/decrypt secrets stored in the keystore
+  2. **Keystore Salt (from `--salt` or auto-generated):** A separate salt is either provided via `--salt` or randomly generated. This salt is stored (encrypted with the AEID) in the `ks/gbls/salt` LMDB key/value pair. **This is the salt used for actual AID key derivation.**
+
+- **Important distinction:** The bran/passcode is **only** used to create the AEID for encryption. It is **not** used directly for AID key derivation. The stored keystore salt is what gets combined with derivation paths to generate AID keys.
 
 ### Key Generation for Inception or Rotation
 
-- Later the `kli incept` call receives the bran, decrypts the salts, and then uses the seed (`0AAthisismysecretkeyseed`) along with the derivation path to generate keys.
-  - The `bran` is sent to `existing.setupHby` -> `Habery.__init__` -> `Manager.incept`
-  - The `bran` goes through `Habery.makeHab` -> `Habery.setup` -> `core.Salter` to reconstitute the core seed and AEID for decryption of the other per-AID salts stored in the local keystore database (Keeper).
-  - The `seed` and `aeid` derived from the bran turned salt form the basis of the Creator.create/SaltyCreator.create function that generates the key.
-- Then during incept, `Habery.makeHab` calls `Hab.make` which reads the seed from the Manager, adds a namespace formatted like `<namespace><name>`, and then calls Manager.incept.
-- Manager.incept calls Creatory.make with the salt, stem, and tier
-- SaltyCreator.create makes a the right number of keys and accounts for KEL state for the rotation index (ridx)
-  - Using `Salter.signer` a path and tier are specified, combined with the raw bytes of the salt `0AAthisismysecretkeyseed`,
-    and then stretched into an Argon2id digest, which is the private key bytes, or seed.
-  - This is done for each generated key, one per path.
+- When `kli incept` (or `kli rotate`) is called, the bran is used to **unlock** the keystore, not to derive keys directly:
+  1. The `bran` is passed to `existing.setupHby` → `Habery.__init__` → `Habery.setup`
+  2. The bran is stretched (with empty path) to recreate the AEID
+  3. The AEID decrypts the stored keystore salt from `ks/gbls/salt`
+  4. The **decrypted keystore salt** (not the bran!) is passed to `SaltyCreator`
+- Then during incept, `Habery.makeHab` calls `Hab.make` which adds a namespace/stem formatted like `<namespace><name>`, and calls `Manager.incept`
+- `Manager.incept` calls `SaltyCreator.create` with the **keystore salt**, stem, and tier
+- `SaltyCreator.create` generates the required number of keys using the derivation path:
+  - Using `Salter.signer`, a path (`stem + ridx_hex + kidx_hex`) and tier are specified
+  - The path is combined with the **keystore salt's raw bytes** and stretched via Argon2id
+  - The output is the private key seed for each key
+  - This is repeated for each key in the set (one per path)
 
 ### KERIpy Implementation
 
@@ -632,71 +624,82 @@ This means **SignifyTS with an empty stem will NOT generate the same keys as KER
 
 In practice, SignifyTS typically uses a non-empty stem (like `"signify:controller"`) which makes this difference moot, but it's important to be aware of when implementing cross-platform recovery or interoperability.
 
-## Recovery: Regenerating Keys from Bran
+## Recovery: Regenerating Keys
 
-One of the most powerful features of this HD derivation scheme is **recovery**. Given only:
-1. The original passcode (bran)
-2. The Key Event Log (KEL)
+One of the most powerful features of this HD derivation scheme is **recovery**. Given:
+1. The original passcode (bran) - to decrypt the keystore
+2. The keystore data (containing the encrypted salt) - or a backup of the salt
+3. The Key Event Log (KEL) - to determine path parameters
 
 You can regenerate all private keys by:
-1. Parsing the KEL to determine ridx and kidx values for each establishment event
-2. Using the known stem (or pidx) from the identifier parameters
-3. Reconstructing each path and re-stretching to get the original keys
+1. Using the bran to recreate the AEID and decrypt the keystore salt
+2. Parsing the KEL to determine ridx and kidx values for each establishment event
+3. Using the known stem (or pidx) from the identifier parameters
+4. Reconstructing each path and re-stretching with the keystore salt to get the original keys
+
+**Note:** If the keystore is lost and no salt backup exists, recovery is impossible even with the correct bran - because the salt used for key derivation is separate from the bran.
 
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                         KEY RECOVERY PROCESS                               │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│   ┌──────────┐     ┌──────────┐                                            │
-│   │ Passcode │     │   KEL    │                                            │
-│   │  (bran)  │     │ (events) │                                            │
-│   └────┬─────┘     └────┬─────┘                                            │
-│        │                │                                                  │
-│        │                ▼                                                  │
-│        │         ┌──────────────┐                                          │
-│        │         │ Parse Events │                                          │
-│        │         │ Extract:     │                                          │
-│        │         │ - ridx       │                                          │
-│        │         │ - kidx       │                                          │
-│        │         │ - stem/pidx  │                                          │
-│        │         └──────┬───────┘                                          │
-│        │                │                                                  │
-│        ▼                ▼                                                  │
-│   ┌──────────────────────────────┐                                         │
-│   │    Reconstruct Each Path     │                                         │
-│   │    path = stem + ridx + kidx │                                         │
-│   └────────────┬─────────────────┘                                         │
-│                │                                                           │
-│                ▼                                                           │
-│   ┌──────────────────────────────┐                                         │
-│   │   Argon2id Stretch Each      │                                         │
-│   │   seed = stretch(path, salt) │                                         │
-│   └────────────┬─────────────────┘                                         │
-│                │                                                           │
-│                ▼                                                           │
-│   ┌─────────────────────────────┐                                          │
-│   │   Recovered Private Keys    │                                          │
-│   │   (identical to originals)  │                                          │
-│   └─────────────────────────────┘                                          │
-│                                                                            │
-└────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         KEY RECOVERY PROCESS                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌──────────┐     ┌───────────┐     ┌──────────┐                           │
+│   │ Passcode │     │ Keystore  │     │   KEL    │                           │
+│   │  (bran)  │     │  (salt)   │     │ (events) │                           │
+│   └────┬─────┘     └─────┬─────┘     └────┬─────┘                           │
+│        │                 │                │                                 │
+│        ▼                 │                │                                 │
+│   ┌─────────────┐        │                │                                 │
+│   │ Recreate    │        │                │                                 │
+│   │ AEID        │        │                │                                 │
+│   └──────┬──────┘        │                │                                 │
+│          │               │                │                                 │
+│          ▼               │                ▼                                 │
+│   ┌─────────────────┐    │         ┌──────────────┐                         │
+│   │ Decrypt stored  │◄───┘         │ Parse Events │                         │
+│   │ keystore salt   │              │ Extract:     │                         │
+│   └────────┬────────┘              │ - ridx       │                         │
+│            │                       │ - kidx       │                         │
+│            │                       │ - stem/pidx  │                         │
+│            │                       └──────┬───────┘                         │
+│            │                              │                                 │
+│            ▼                              ▼                                 │
+│   ┌──────────────────────────────────────────┐                              │
+│   │    Reconstruct Each Path                 │                              │
+│   │    path = stem + ridx_hex + kidx_hex     │                              │
+│   └────────────────────┬─────────────────────┘                              │
+│                        │                                                    │
+│                        ▼                                                    │
+│   ┌──────────────────────────────────────────┐                              │
+│   │   Argon2id Stretch Each                  │                              │
+│   │   seed = stretch(path, keystore_salt)    │                              │
+│   └────────────────────┬─────────────────────┘                              │
+│                        │                                                    │
+│                        ▼                                                    │
+│   ┌──────────────────────────────────────────┐                              │
+│   │   Recovered Private Keys                 │                              │
+│   │   (identical to originals)               │                              │
+│   └──────────────────────────────────────────┘                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Summary Table: Key Derivation Parameters
 
-| Parameter | Source                    | Purpose                                    |
-|-----------|---------------------------|--------------------------------------------|
-| `bran`    | User passcode (21+ chars) | Root entropy                               |
-| `salt`    | Decoded from bran         | Argon2id salt parameter                    |
-| `tier`    | Configuration             | Controls Argon2id time/memory              |
-| `pidx`    | Manager state             | Prefix index (identifier sequence)         |
-| `stem`    | Per-identifier config     | Path prefix (or pidx if empty)             |
-| `ridx`    | KEL state                 | Rotation index (establishment event count) |
-| `kidx`    | KEL state                 | Key index (cumulative key count)           |
-| `i`       | Loop variable             | Index within current key set               |
-| `path`    | Computed                  | `stem + ridx_hex + kidx_hex`               |
-| `seed`    | Argon2id output           | 32-byte Ed25519 private key                |
+| Parameter | Source                              | Purpose                                       |
+|-----------|-------------------------------------|-----------------------------------------------|
+| `bran`    | User passcode (21+ chars)           | Creates AEID for keystore encryption          |
+| `salt`    | `--salt` arg or auto-generated      | Argon2id salt for AID key derivation          |
+| `aeid`    | Derived from bran (empty path)      | Encrypts/decrypts secrets in keystore         |
+| `tier`    | Configuration                       | Controls Argon2id time/memory                 |
+| `pidx`    | Manager state                       | Prefix index (identifier sequence)            |
+| `stem`    | Per-identifier config               | Path prefix (or pidx if empty)                |
+| `ridx`    | KEL state                           | Rotation index (establishment event count)    |
+| `kidx`    | KEL state                           | Key index (cumulative key count)              |
+| `i`       | Loop variable                       | Index within current key set                  |
+| `path`    | Computed                            | `stem + ridx_hex + kidx_hex`                  |
+| `seed`    | Argon2id output                     | 32-byte Ed25519 private key                   |
 
 ## Conclusion
 
@@ -749,4 +752,5 @@ The `Signator` is a perfect example of HD derivation in practice:
 
 
 [CESR]: https://trustoverip.github.io/kswg-cesr-specification/
+[GHDiscuss929]: https://github.com/WebOfTrust/keripy/discussions/929
 [TLV]: https://grokipedia.com/page/Type%E2%80%93length%E2%80%93value
