@@ -4,7 +4,7 @@ slug = "keri-hd-key-derivation-deep-dive"
 date = "2026-01-22"
 
 [taxonomies]
-tags: ["keri", ,"keripy", "keria", "signify", "signify-ts", "cryptography", "key-management", "key derivation"]
+tags = ["keri", ,"keripy", "keria", "signify", "signify-ts", "cryptography", "key-management", "key derivation"]
 
 [extra]
 comment = true
@@ -382,35 +382,46 @@ This elegant mathematical property allows KERI to use the **minimally sufficient
 
 ## The Stretching Function: Argon2id
 
-The path and salt are combined using the Argon2id key derivation function:
+The path and salt are combined using the Argon2id key derivation function in Salter.stretch() shown below.
+The Salt used in Salter is randomly generated when a keystore is first created using `kli init` or a call to the `Habery` constructor in KERIpy.
 
 ```python
 # KERIpy - signing.py
-def stretch(self, *, size=32, path="", tier=None, temp=False):
-    """
-    Returns raw binary seed derived from path and .raw (salt)
-    stretched to size using argon2id stretching algorithm.
-    """
-    # Security parameters based on tier
-    if tier == Tiers.low:
-        opslimit = 2   # INTERACTIVE
-        memlimit = 67108864  # 64 MB
-    elif tier == Tiers.med:
-        opslimit = 3   # MODERATE  
-        memlimit = 268435456  # 256 MB
-    elif tier == Tiers.high:
-        opslimit = 4   # SENSITIVE
-        memlimit = 1073741824  # 1 GB
-    
-    seed = pysodium.crypto_pwhash(
-        outlen=size,        # Output: 32 bytes for Ed25519
-        passwd=path,        # The path string (e.g., "000")
-        salt=self.raw,      # The 16-byte salt from bran
-        opslimit=opslimit,
-        memlimit=memlimit,
-        alg=pysodium.crypto_pwhash_ALG_ARGON2ID13
-    )
-    return seed
+class Salter(Matter):
+    ...
+    def stretch(self, *, size=32, path="", tier=None, temp=False):
+        """
+        Returns raw binary seed derived from path and .raw (salt)
+        stretched to size using argon2id stretching algorithm.
+        """
+        tier = tier if tier is not None else self.tier
+
+        # Security parameters based on tier
+        if temp:
+            opslimit = 1  # pysodium.crypto_pwhash_OPSLIMIT_MIN
+            memlimit = 8192  # pysodium.crypto_pwhash_MEMLIMIT_MIN
+        else:
+            if tier == Tiers.low:
+                opslimit = 2  # pysodium.crypto_pwhash_OPSLIMIT_INTERACTIVE
+                memlimit = 67108864  # pysodium.crypto_pwhash_MEMLIMIT_INTERACTIVE
+            elif tier == Tiers.med:
+                opslimit = 3  # pysodium.crypto_pwhash_OPSLIMIT_MODERATE
+                memlimit = 268435456  # pysodium.crypto_pwhash_MEMLIMIT_MODERATE
+            elif tier == Tiers.high:
+                opslimit = 4  # pysodium.crypto_pwhash_OPSLIMIT_SENSITIVE
+                memlimit = 1073741824  # pysodium.crypto_pwhash_MEMLIMIT_SENSITIVE
+            else:
+                raise ValueError("Unsupported security tier = {}.".format(tier))
+
+        # stretch algorithm is argon2id - password hash algo used as a stretcher
+        seed = pysodium.crypto_pwhash(
+            outlen=size,       # 32 for Ed25516
+            passwd=path,       # 000 for first key of single sig AID
+            salt=self.raw,     # 0AAthisismysecretkeyseed
+            opslimit=opslimit, # 3 for medium
+            memlimit=memlimit, # 268435456 for medium
+            alg=pysodium.crypto_pwhash_ALG_ARGON2ID13)
+        return (seed)
 ```
 
 ### Security Tiers
@@ -422,11 +433,48 @@ def stretch(self, *, size=32, path="", tier=None, temp=False):
 | `high` | 4        | 1 GB     | High-security environments          |
 | `temp` | 1        | 8 KB     | Testing only (NEVER in production!) |
 
-## Code Walkthrough: SaltyCreator.create()
+## Code Walkthrough
 
-Let's trace through the actual implementation:
+Let's trace through the actual implementation for generating a key based on the deterministic (salty - using a salt) derivation strategy.
+
+The general flow for the KLI in KERIpy is this:
+
+### Keystore Initialization - setting the seed and salt
+- A passcode and a salt may both be specified to `kli init`. Not specifying a salt means one will be auto-generated and used.
+- `passcode` to salt (`Salter`)
+  - Using the KLI the user types in their passcode for `kli init`. A salt may also be specified if the user wants to deterministically generate keys rather than use a random salt, which would randomize the keys for a given keystore.
+  - The passcode is passed to the `bran` argument. This then goes to `Habery.__init__`, and then `Habery.setup`
+  - `Habery.setup` truncates the bran to 21 chars and prefixes `0AA` on the front of it to make it a valid Ed25519 cryptographic seed.
+  - The keystore-level global salt is received or generated and stored as the value in the `ks/gbls/salt` LMDB key/value pair.
+  - This seed is turned into a `core.Salter` 
+  
+- Salt used as basis for key generation
+  - The salt is used to generate a signing key (private key) using `pysodium.crypto_pwhash` to derive (by streching)
+    - `""` default path of a blank string 
+    - `0AAthisismysecretkeyseed` bran passed in
+    - `low/med/high` security tier
+  - The output of the `crypto_pwhash` becomes the set of bytes used as a cryptographic seed in a `Signer` object.    
+- This first Signer object is used as both the 
+  - `seed` for the keystore manager `Manager` object
+  - `aeid` - Authentication and Encription AID that is used to encrypt and decrypt the cryptographic seeds for each AID stored in a given keystore.
+- This means that during key creation later the seed and salt set during keystore initialization will be used as components of the key generation for inception and rotation.
+
+### Key Generation for Inception or Rotation
+
+- Later the `kli incept` call receives the bran, decrypts the salts, and then uses the seed (`0AAthisismysecretkeyseed`) along with the derivation path to generate keys.
+  - The `bran` is sent to `existing.setupHby` -> `Habery.__init__` -> `Manager.incept`
+  - The `bran` goes through `Habery.makeHab` -> `Habery.setup` -> `core.Salter` to reconstitute the core seed and AEID for decryption of the other per-AID salts stored in the local keystore database (Keeper).
+  - The `seed` and `aeid` derived from the bran turned salt form the basis of the Creator.create/SaltyCreator.create function that generates the key.
+- Then during incept, `Habery.makeHab` calls `Hab.make` which reads the seed from the Manager, adds a namespace formatted like `<namespace><name>`, and then calls Manager.incept.
+- Manager.incept calls Creatory.make with the salt, stem, and tier
+- SaltyCreator.create makes a the right number of keys and accounts for KEL state for the rotation index (ridx)
+  - Using `Salter.signer` a path and tier are specified, combined with the raw bytes of the salt `0AAthisismysecretkeyseed`,
+    and then stretched into an Argon2id digest, which is the private key bytes, or seed.
+  - This is done for each generated key, one per path.
 
 ### KERIpy Implementation
+
+The code below shows the flow from the perspective of SaltyCreator having its `create` function invoked. It illustrates how the Salter is used to create a Signer by using the salt bytes, path, and tier with the Argon2id hash function to convert, or stretch, all those arguments into the set of bytes that is the private key, labeled here as `seed`.
 
 ```python
 # keri/app/keeping.py
@@ -458,9 +506,61 @@ class SaltyCreator(Creator):
                 temp=temp
             ))
         return signers
+
+# keri/core/signing.py
+class Salter(Matter):
+    ...
+    def signer(self, *, code=MtrDex.Ed25519_Seed, transferable=True, path="",
+               tier=None, temp=False):
+        """
+        Stretches the self.raw-salted derivation path into a proper length 
+        key seed and returns a Signer instance that contains the keypair.
+        """
+        seed = self.stretch(
+            size=Matter._rawSize(code), 
+            path=path, 
+            tier=tier, 
+            temp=temp)
+        return (Signer(raw=seed, code=code, transferable=transferable))
+
+    def stretch(self, *, size=32, path="", tier=None, temp=False):
+        """
+        Returns raw binary seed derived from path and .raw (salt)
+        stretched to size using argon2id stretching algorithm.
+        """
+        tier = tier if tier is not None else self.tier
+
+        # Security parameters based on tier
+        if temp:
+            opslimit = 1  # pysodium.crypto_pwhash_OPSLIMIT_MIN
+            memlimit = 8192  # pysodium.crypto_pwhash_MEMLIMIT_MIN
+        else:
+            if tier == Tiers.low:
+                opslimit = 2  # pysodium.crypto_pwhash_OPSLIMIT_INTERACTIVE
+                memlimit = 67108864  # pysodium.crypto_pwhash_MEMLIMIT_INTERACTIVE
+            elif tier == Tiers.med:
+                opslimit = 3  # pysodium.crypto_pwhash_OPSLIMIT_MODERATE
+                memlimit = 268435456  # pysodium.crypto_pwhash_MEMLIMIT_MODERATE
+            elif tier == Tiers.high:
+                opslimit = 4  # pysodium.crypto_pwhash_OPSLIMIT_SENSITIVE
+                memlimit = 1073741824  # pysodium.crypto_pwhash_MEMLIMIT_SENSITIVE
+            else:
+                raise ValueError("Unsupported security tier = {}.".format(tier))
+
+        # stretch algorithm is argon2id - password hash algo used as a stretcher
+        seed = pysodium.crypto_pwhash(
+            outlen=size,       # 32 for Ed25516
+            passwd=path,       # 000 for first key of single sig AID
+            salt=self.raw,     # 0AAthisismysecretkey
+            opslimit=opslimit, # 3 for medium
+            memlimit=memlimit, # 268435456 for medium
+            alg=pysodium.crypto_pwhash_ALG_ARGON2ID13)
+        return (seed)
 ```
 
 ### SignifyTS Implementation
+
+The SignifyTS implementation is intentionally very similar to the Python implementation. There is one non-critical diference, noted below, that will likely be rectified in the near future.
 
 ```typescript
 // keri/core/manager.ts
@@ -509,7 +609,7 @@ export class SaltyCreator implements Creator {
 
 ### Implementation Difference: KERIpy vs SignifyTS
 
-There's an important implementation difference between the two codebases:
+As of January 2026 there's an important implementation difference between the two codebases that will likely be aligned in the near future.
 
 **KERIpy** (canonical):
 ```python
@@ -563,16 +663,16 @@ You can regenerate all private keys by:
 │        │         └──────┬───────┘                                          │
 │        │                │                                                  │
 │        ▼                ▼                                                  │
-│   ┌─────────────────────────────┐                                          │
-│   │    Reconstruct Each Path    │                                          │
+│   ┌──────────────────────────────┐                                         │
+│   │    Reconstruct Each Path     │                                         │
 │   │    path = stem + ridx + kidx │                                         │
-│   └────────────┬────────────────┘                                          │
+│   └────────────┬─────────────────┘                                         │
 │                │                                                           │
 │                ▼                                                           │
-│   ┌─────────────────────────────┐                                          │
-│   │   Argon2id Stretch Each     │                                          │
+│   ┌──────────────────────────────┐                                         │
+│   │   Argon2id Stretch Each      │                                         │
 │   │   seed = stretch(path, salt) │                                         │
-│   └────────────┬────────────────┘                                          │
+│   └────────────┬─────────────────┘                                         │
 │                │                                                           │
 │                ▼                                                           │
 │   ┌─────────────────────────────┐                                          │
@@ -621,6 +721,31 @@ The mathematical elegance of the delimiter-free path format demonstrates KERI's 
 - [KERIpy Source: keri/app/keeping.py](https://github.com/WebOfTrust/keripy/blob/master/src/keri/app/keeping.py)
 - [SignifyTS Source: keri/core/manager.ts](https://github.com/WebOfTrust/signify-ts/blob/main/src/keri/core/manager.ts)
 - [Argon2 Specification](https://github.com/P-H-C/phc-winner-argon2)
+
+
+## Appendix: The Internal Notary (Signator)
+
+A fascinating real-world application of the HD key derivation scheme in KERI is the `Signator` class. When you initialize a KERI environment (a `Habery`), the system automatically creates an internal, hidden identifier to act as a local notary.
+
+### What is the Signator?
+The `Signator` is a non-transferable (basic) AID that KERI uses for its own internal security architecture. It demonstrates how the `stem` parameter is used to isolate key-spaces.
+
+*   **Reserved Alias (Stem):** It always uses the fixed alias `__signatory__` as its stem.
+*   **Hidden Presence:** It is marked as `hidden=True` and `transferable=False`. It doesn't show up in your list of AIDs and its keys never rotate.
+*   **Derived from `bran`:** Its private key is derived from the same `bran` (passcode) you provide during `kli init`.
+
+### Purpose: Security at Rest
+The `Signator` signs internal system data to ensure its integrity and authenticity while stored "at rest":
+
+1.  **BADA Data:** It signs data following the "Best Available Data Acceptance" model, ensuring that local database records haven't been tampered with.
+2.  **Internal Notifications:** Local system notifications for the user are signed by the `Signator`.
+3.  **Connection Challenges:** During OOBI resolution and connection establishment, the `Signator` signs the nonces and challenges used to authenticate the peer.
+
+### Why This Matters for HD Schemes
+The `Signator` is a perfect example of HD derivation in practice:
+
+1.  **Isolation via Stemming:** Even though your primary AID and the `Signator` share the same `bran`, they are cryptographically isolated because their paths start with different stems (e.g., `stem="0"` vs `stem="__signatory__"`).
+2.  **Automatic Recovery:** Because the `Signator` is derived deterministically, if you recover your wallet from your passcode on a new machine, the internal `Signator` AID is also automatically recovered. All previously signed internal data remains verifiable without you ever having to manually back up a "system key."
 
 
 [CESR]: https://trustoverip.github.io/kswg-cesr-specification/
