@@ -144,14 +144,14 @@ path = "{}{:x}{:x}".format(stem, ridx, kidx + i)
 
 For a single-sig identifier with `pidx=0` (so stem becomes `"0"`):
 
-| Event             | ridx | kidx | i | Path      | Description                      |
-|-------------------|------|------|---|-----------|----------------------------------|
-| Inception signing | 0    | 0    | 0 | `"000"`   | stem="0" + ridx="0" + kidx="0"   |
-| Inception next    | 1    | 1    | 0 | `"011"`   | stem="0" + ridx="1" + kidx="1"   |
-| Rotation 1 next   | 2    | 2    | 0 | `"022"`   | stem="0" + ridx="2" + kidx="2"   |
-| Rotation 2 next   | 3    | 3    | 0 | `"033"`   | stem="0" + ridx="3" + kidx="3"   |
-| Rotation 9 next   | a    | 10   | 0 | `"0aa"`   | stem="0" + ridx="a" + kidx="a"   |
-| Rotation 15 next  | 10   | 16   | 0 | `"01010"` | stem="0" + ridx="10" + kidx="10" |
+| Event             | ridx | kidx | i | Path      | Description                      | Decimal kidx |
+|-------------------|------|------|---|-----------|----------------------------------|--------------|
+| Inception signing | 0    | 0    | 0 | `"000"`   | stem="0" + ridx="0" + kidx="0"   |            0 |
+| Inception next    | 1    | 1    | 0 | `"011"`   | stem="0" + ridx="1" + kidx="1"   |            1 |
+| Rotation 1 next   | 2    | 2    | 0 | `"022"`   | stem="0" + ridx="2" + kidx="2"   |            2 |
+| Rotation 2 next   | 3    | 3    | 0 | `"033"`   | stem="0" + ridx="3" + kidx="3"   |            3 |
+| Rotation 9 next   | a    | a    | 0 | `"0aa"`   | stem="0" + ridx="a" + kidx="a"   |            9 |
+| Rotation 15 next  | 10   | 10   | 0 | `"01010"` | stem="0" + ridx="10" + kidx="10" |           16 |
 
 Note: At each rotation, the previous "next" key becomes the current signing key (it was pre-generated).
 
