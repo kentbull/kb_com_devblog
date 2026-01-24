@@ -1,4 +1,5 @@
 +++
+draft = true
 title = "Configuring KERIpy Controllers, Witnesses, and KERIA Agents"
 slug = "configuring-keripy-keria-controllers-witnesses"
 date = "2026-01-21"
