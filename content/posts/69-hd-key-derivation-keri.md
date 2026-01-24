@@ -4,7 +4,7 @@ slug = "keri-hd-key-derivation-deep-dive"
 date = "2026-01-22"
 
 [taxonomies]
-tags = ["keri", ,"keripy", "keria", "signify", "signify-ts", "cryptography", "key-management", "key derivation"]
+tags = ["keri", "keripy", "keria", "signify", "signify-ts", "cryptography", "key-management", "key derivation"]
 
 [extra]
 comment = true
