@@ -21,11 +21,11 @@ How do you configure witnesses, mailboxes, and service endpoints in KERIpy and K
 
 Configuring KERIpy controllers and KERIA agents occurs at multiple levels:
 
-1. **Controller Configuration** (KERIpy) - How your local identifier finds witnesses and peers
+1. **Controller Configuration** (KERIpy) - How your local identifier finds witnesses and peers, and which ports it listens on, if any.
 2. **Witness Configuration** (KERIpy) - The endpoints witnesses listen on
-3. **Mailbox Configuration** (KERIpy) - Where witnesses deliver receipts and messages
+3. **Mailbox Configuration** (KERIpy) - Where receipts and messages are delivered to
 4. **Agency Configuration** (KERIA) - Global settings for the KERIA service
-5. **Agent Configuration** (KERIA) - Per-controller settings within KERIA
+5. **Agent Configuration** (KERIA) - Per-agent settings within KERIA
 
 Let's explore each, starting with file-based configuration and progressing to runtime endpoint role authorization.
 
@@ -54,12 +54,13 @@ Configuration files follow this structure:
 
 ```json
 {
-  "dt": "2021-01-01T00:00:00.000000+00:00",
-  "curls": [
-    "http://127.0.0.1:7723/oobi/EBNaNu-M9P5cgrnfl2Fvymy4E_jvxxyjb70PRtiANlJy"
-  ],
+  "dt": "2022-01-01T00:00:00.000000+00:00",
+  "<AID name or prefix>": {
+    "dt": "2022-01-20T12:57:59.823350+00:00",
+    "curls": ["tcp://127.0.0.1:12344/", "http://127.0.0.1:12345/"]
+  },
   "iurls": [
-    "tcp://localhost:5620/?role=peer&name=tam"
+    "http://127.0.0.1:5642/oobi/BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha/controller"
   ],
   "durls": [
     "http://127.0.0.1:7723/oobi/EMhvwOlyEJ9kN4PrwCpr9Jsv7TxPhiYveZ0oP3lJzdEi"
@@ -72,10 +73,10 @@ Configuration files follow this structure:
 
 **Configuration URL Types:**
 
-- **`curls`** (Controller URLs): OOBI URLs for controller endpoints - where this controller can be reached
-- **`iurls`** (Introduction URLs): OOBI URLs for witnesses, watchers, mailboxes, and peers to resolve at startup
+- **`curls`** (Controller URLs): URLs + ports on which to set up either a TCP or HTTP port listener - where this controller can be reached
+- **`iurls`** (Introduction URLs): OOBI URLs for witnesses, watchers, mailboxes, and any KERI controller to resolve at startup
 - **`durls`** (Data URLs): OOBI URLs for static data like ACDC schemas or credentials
-- **`wurls`** (Witness URLs): Well-known OOBI URLs specifically for witnesses
+- **`wurls`** (Well Known URLs): OOBI URLs specifically for well known components
 
 ### Habery Configuration and Initialization
 
@@ -101,6 +102,8 @@ class Habery:
 
 Three initialization patterns exist:
 
+TODO really? Double check this. Maybe best to remove or condense this section.
+
 #### Pattern 1: Auto-initialization (Simplest)
 
 ```python
@@ -116,8 +119,7 @@ with habbing.openHby(name="test", temp=True) as hby:
 cf = configing.Configer(name="myconfig", base="mybase", temp=False)
 conf = {
     "dt": help.nowIso8601(),
-    "iurls": ["tcp://localhost:5621/?role=witness&name=wes"],
-    "curls": ["http://localhost:7723/oobi/EBNa..."]
+    "iurls": ["http://127.0.0.1:5642/oobi/BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha/controller"],
 }
 cf.put(conf)
 
@@ -137,7 +139,7 @@ cf = configing.Configer(name="test", temp=False)
 # Configure
 conf = {
     "dt": help.nowIso8601(),
-    "iurls": ["tcp://localhost:5621/?role=witness&name=wes"]
+    "iurls": ["http://127.0.0.1:5642/oobi/BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha/controller"]
 }
 cf.put(conf)
 
@@ -209,6 +211,8 @@ assert locer.url == 'tcp://localhost:5620/'
 ```
 
 ### Namespaced Habs
+
+TODO Verify this. Really namespaced config? How so? Remove if not true.
 
 KERIpy supports namespace isolation for multiple identifiers:
 

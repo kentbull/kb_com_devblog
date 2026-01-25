@@ -10,23 +10,23 @@ tags = ["keri", "keripy", "keria", "signify", "signify-ts", "cryptography", "key
 comment = true
 +++
 
-Understanding how cryptographic keys are deterministically derived in KERI is essential for anyone building or integrating with KERI-based systems. This post provides a comprehensive breakdown of the hierarchical deterministic (HD) key derivation algorithm implemented in KERIpy and SignifyTS, explaining how a simple passcode (the "bran") can reproducibly generate an infinite sequence of cryptographic keys.
+Understanding how cryptographic keys are deterministically derived in KERI is essential for anyone building or integrating with KERI-based systems. This post provides a comprehensive breakdown of the hierarchical deterministic (HD) key derivation algorithm implemented in KERIpy and SignifyTS, explaining how a simple passcode (the "bran") is the mechanism controlling reproducible generation, storage, encryption, and decryption of an infinite sequence of cryptographic keys. Along with this passcode a cryptographic salt and deterministic key paths are the heart of the KERI HD key generation scheme.
 
 ## Overview: The Key Derivation Pipeline
 
-KERI uses two related but distinct derivation processes. Understanding this separation is critical:
+KERI uses two related but distinct key derivation processes, one for the encryption and decryption key and the other for the path-based derivation of private and public key pairs. Understanding this separation is critical:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    KEYSTORE INITIALIZATION (kli init)                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
+│   ENCRYPTION/DECRYPTION KEY         KEYS USED FOR IDENTIFIERS               │
 │   User Passcode (21+ chars)              Keystore Salt                      │
 │         │                                (--salt or auto-generated)         │
 │         ▼                                      │                            │
-│   ┌─────────────┐                              │                            │
+│   ┌─────────────┐               first 21 chars │                            │
 │   │    Bran     │  "0A" + "A" + passcode[0:21] │                            │
-│   └──────┬──────┘                              │                            │
+│   └──────┬──────┘        thisismysecretkeyseed │                            │
 │          │                                     │                            │
 │          ▼                                     │                            │
 │   ┌─────────────┐                              │                            │
@@ -47,13 +47,13 @@ KERI uses two related but distinct derivation processes. Understanding this sepa
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    AID KEY DERIVATION (kli incept/rotate)                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
+│   KEYS USED FOR IDENTIFIERS                                                 │
 │   Keystore Salt (decrypted using AEID from bran)                            │
 │         │                                                                   │
 │         ▼                                                                   │
 │   ┌─────────────┐                                                           │
 │   │   Salter    │  Base64 decode → 16 raw bytes                             │
-│   │ (128-bit)   │  Used as Argon2id salt parameter                          │
+│   │ (128-bit)   │  Used as Argon2id salt parameter (crypto_pwhash function) │
 │   └──────┬──────┘                                                           │
 │          │                                                                  │
 │          │  + Path (stem + ridx + kidx)                                     │
@@ -75,19 +75,28 @@ KERI uses two related but distinct derivation processes. Understanding this sepa
 
 **Key insight:** The user's passcode (bran) is **never** used directly for AID key derivation. It only creates the AEID used to encrypt/decrypt the keystore salt. The actual AID keys come from the keystore salt combined with derivation paths.
 
-## The Bran: Your Master Secret
+## The Bran: Master Secret and encryption key
 
-The "bran" is a subset of the user-provided string along with the "0AA" prefix explained below. The user-provided portion of the bran is often labeled as "passcode" in the KERI ecosystem. While the bran is your master secret, it does **not** directly derive AID keys. Instead, it creates the AEID (Authentication and Encryption ID) used to protect the keystore salt, which in turn derives the actual AID keys.
+The "bran" is a subset (up to the first 21 chars) of the user-provided "passcode" string along with the "0AA" prefix explained below. The user-provided portion of the bran is often labeled as "passcode" in the KERI ecosystem. While the bran is your master secret, it does **not** directly derive AID keys. Instead, it creates the AEID (Authentication and Encryption ID) used to protect the keystore salt, which in turn derives the actual AID keys.
 
 A bran is composed of, in order, a type code on the front (`"0A"`), a filler "zero" character (`"A"`), and the first twenty one characters of the user-provided passcode string. Concatenating all these parts together forms a string like `"0AAthisismysecretkeyseed"` and constitutes a valid [CESR][CESR] cryptographic key seed. The construction process shown below is used to create a CESR data structure, specifically a cryptographic seed.
 
 ### Bran Construction
 
+From KERIpy:
+```python
+bran = coring.MtrDex.Salt_128 + 'A' + bran[:21]  # qb64 salt for seed
+# Results in: "0A" + "A" + "thisismysecretkeyseed"
+#    = "0AAthisismysecretkeyseed"
+```
+
+And from SignifyTS:
+
 ```typescript
 // SignifyTS - manager.ts
 const bran = MtrDex.Salt_128 + 'A' + passcode.substring(0, 21);
 // Results in: "0A" + "A" + "thisismysecretkeyseed"
-//           = "0AAthisismysecretkeyseed"
+//         = "0AAthisismysecretkeyseed"
 ```
 
 The bran is constructed as a valid qb64-encoded CESR primitive:
@@ -99,9 +108,9 @@ The bran is constructed as a valid qb64-encoded CESR primitive:
 
 The reason the type code "0A" is prefixed on the front of the cryptographic seed CESR primitive is because CESR is a [type-length-value][TLV] data encoding format where the type code comes first in the order of bytes.
 
-## The Salter: Managing Your Salt
+## The Salter: Managing Your Seed and Salt
 
-The `Salter` class wraps a qb64-encoded salt and provides the Argon2id key stretching functionality. It is used in two contexts:
+The `Salter` class wraps the seed generated from the bran as a CESR encoded value and provides the Argon2id key stretching functionality. Within the KERIpy and SignifyTS codebases this encoding is called "qualified Base64," or "qb64" for short. The `Salter` class is used in two contexts, as the container for the cryptographic seed used as the encryption key and as the container for the base seed used for AID key derivation.
 
 1. **AEID creation:** Wraps the bran and stretches it with an empty path to create the AEID
 2. **AID key derivation:** Wraps the keystore salt and stretches it with derivation paths to create AID keys
@@ -111,15 +120,18 @@ The `Salter` class wraps a qb64-encoded salt and provides the Argon2id key stret
 class Salter(Matter):
     """
     Salter is Matter subclass to maintain random salt for secrets (private keys)
-    Its .raw is random salt, .code as cipher suite for salt
+    Its 
+      .raw is the bytes of the salt, such as "0AAthisismysecretkeyseed"
+      .code as cipher suite for salt (algorithm).
+
+    The qb64 encoded seed/salt string is encoded as bytes to get 16 raw bytes for the raw argument.
     """
     def __init__(self, raw=None, code=MtrDex.Salt_128, tier=None, **kwa):
-        # Decode qb64 salt to get 16 raw bytes
         super(Salter, self).__init__(raw=raw, code=code, **kwa)
         self.tier = tier if tier is not None else Tiers.low
 ```
 
-The Salter extracts the 16 raw bytes from the qb64-encoded salt and stores the security tier for later stretching operations.
+The Salter receives the 16 raw bytes from the qb64-encoded seed/salt and stores the security tier for later stretching operations.
 
 ## The Path: Deterministic Key Indexing
 
@@ -133,12 +145,23 @@ path = "{}{:x}{:x}".format(stem, ridx, kidx + i)
 
 ### Path Components
 
+The starting rotation index (ridx) and key index (kidx) are derivable from the current state of the key event log (KEL).
+
 | Component | Description                                 | Format                | Example                         |
 |-----------|---------------------------------------------|-----------------------|---------------------------------|
 | `stem`    | Prefix identifier (or pidx in hex)          | string or hex         | `"signify:controller"` or `"0"` |
 | `ridx`    | Rotation index (establishment event number) | hex (no padding)      | `0`, `1`, `a`, `10`             |
 | `kidx`    | Key index (cumulative key count)            | hex (no padding)      | `0`, `1`, `2`, `a`              |
 | `i`       | Index within current key set                | integer added to kidx | `0`, `1`, `2`                   |
+
+#### Stem
+
+`stem` is defaulted in KERIpy as follows from the name and namespace, if any:
+```python
+stem = self.name if self.ns is None else f"{self.ns}{self.name}"
+```
+
+The stem is a prefix to a path that may be used to namespace a given set of keys. For example, KERIpy uses the default stem of the string `"0"` for keys generated for keys stored in a KERIpy keystore. KERIpy also uses the SignifyTS uses the default stem of `"signify:controller"` for the Signify Controller and `"signify:aid"` for generated keys used for AIDs stored in KERIA.
 
 ### Path Examples
 
@@ -206,7 +229,7 @@ At rotation, the previous "next" keys become the new signing keys (no re-generat
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key observation for single-sig**: `ridx == kidx` always, because each rotation uses exactly 1 key.
+**Key observation for single key single-sig**: `ridx == kidx` always, because each rotation uses exactly 1 key.
 The path formula `stem + ridx_hex + kidx_hex` produces symmetric patterns like `"0aa"` and `"01010"`.
 
 ### Path Structure Breakdown
@@ -222,7 +245,7 @@ A key point from [GitHub Discussion #929][GHDiscuss929] is that the no-separator
 - Or `stem="0"`, `ridx=0`, `kidx=39` (a 57+ key multisig at inception)?
 - Or `stem="03"`, `ridx=9`, `kidx=???` (different stem)?
 
-**The Resolution**: You never need to PARSE a path backward. You always GENERATE paths forward from known context.
+**The Resolution**: You never need to PARSE a path backward. You always GENERATE paths forward from known context, specifically the KEL.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -232,7 +255,7 @@ A key point from [GitHub Discussion #929][GHDiscuss929] is that the no-separator
 │  ✗ WRONG APPROACH: Try to parse "039" → (stem=?, ridx=?, kidx=?)             │
 │                    This is AMBIGUOUS without context!                        │
 │                                                                              │
-│  ✓ RIGHT APPROACH: Generate path from known parameters:                      │
+│  ✓ RIGHT APPROACH: Generate path from known parameters (the KEL):            │
 │                                                                              │
 │    You have: stem="0" (from identifier params)                               │
 │              ridx=3   (from KEL: this is rotation 2's next keys)             │
@@ -266,6 +289,7 @@ The generation algorithm walks the KEL sequentially:
 │                                                                              │
 │  Given: bran, stem, tier, KEL                                                │
 │                                                                              │
+│  keys = [] # all keys in sequential order                                    │
 │  kidx = 0                                                                    │
 │  for each establishment_event in KEL:                                        │
 │      ridx = event.sequence_number  (0 for inception, 1 for rot1, etc.)       │
@@ -274,7 +298,7 @@ The generation algorithm walks the KEL sequentially:
 │      for i in 0..key_count-1:                                                │
 │          path = stem + hex(ridx) + hex(kidx + i)                             │
 │          seed = argon2id(path, salt, tier)                                   │
-│          key[i] = ed25519_from_seed(seed)                                    │
+│          keys[kidx] = ed25519_from_seed(seed)                                │
 │                                                                              │
 │      kidx += key_count    # Accumulate for next event                        │
 │                                                                              │
@@ -443,7 +467,7 @@ class Salter(Matter):
         seed = pysodium.crypto_pwhash(
             outlen=size,       # 32 for Ed25516
             passwd=path,       # 000 for first key of single sig AID
-            salt=self.raw,     # 0AAthisismysecretkeyseed
+            salt=self.raw,     # 0ADOuCna7ifKHklxC7cU0s2E - generated or passed in --salt arg
             opslimit=opslimit, # 3 for medium
             memlimit=memlimit, # 268435456 for medium
             alg=pysodium.crypto_pwhash_ALG_ARGON2ID13)
@@ -569,7 +593,7 @@ class Salter(Matter):
         seed = pysodium.crypto_pwhash(
             outlen=size,       # 32 for Ed25516
             passwd=path,       # 000 for first key of single sig AID
-            salt=self.raw,     # 0AAthisismysecretkey
+            salt=self.raw,     # 0ADOuCna7ifKHklxC7cU0s2E
             opslimit=opslimit, # 3 for medium
             memlimit=memlimit, # 268435456 for medium
             alg=pysodium.crypto_pwhash_ALG_ARGON2ID13)
@@ -760,6 +784,10 @@ A fascinating real-world application of the HD key derivation scheme in KERI is 
 The `Signator` is a non-transferable (basic) AID that KERI uses for its own internal security architecture. It demonstrates how the `stem` parameter is used to isolate key-spaces.
 
 *   **Reserved Alias (Stem):** It always uses the fixed alias `__signatory__` as its stem.
+   * `stem` is defaulted in KERIpy as follows from the name and namespace, if any:
+     ```python
+     stem = self.name if self.ns is None else f"{self.ns}{self.name}"
+     ```
 *   **Hidden Presence:** It is marked as `hidden=True` and `transferable=False`. It doesn't show up in your list of AIDs and its keys never rotate.
 *   **Derived from `bran`:** Its private key is derived from the same `bran` (passcode) you provide during `kli init`.
 
