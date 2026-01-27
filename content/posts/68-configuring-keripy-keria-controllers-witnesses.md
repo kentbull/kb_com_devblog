@@ -1,8 +1,7 @@
 +++
-draft = true
 title = "Configuring KERIpy Controllers, Witnesses, and KERIA Agents"
 slug = "configuring-keripy-keria-controllers-witnesses"
-date = "2026-01-21"
+date = "2026-01-26"
 
 [taxonomies]
 tags=["keri", "keria", "keripy", "configuration", "witnesses", "controllers", "agents", "iurls", "curls", "durls", "oobi"]
@@ -11,25 +10,36 @@ tags=["keri", "keria", "keripy", "configuration", "witnesses", "controllers", "a
 comment = true
 +++
 
-# Configuring KERIpy Controllers, Witnesses, and KERIA Agents
+# Configuring KERIpy Components, KERIA Agents, and Well-known URIs
 
-How do you configure witnesses, mailboxes, and service endpoints in KERIpy and KERIA? This article explains the configuration mechanisms from file-based configuration to endpoint role authorization, clarifying the distinction between controller, witness, mailbox, agency, and agent configurations.
+How do you configure, publish, discover, and connect KERI components? Whether witnesses, verifiers, KERIA deployments, mailboxes, or general KERI controllers, configuration touches the topics of node publication, discovery, and connection, data discovery, and service endpoints. Node discovery and connection occurs with out of band identifiers (OOBIs). Data discovery of ACDC schemas and contents also utilize with OOBIs. Service endpoint configurations combine location scheme records and endpoint role authorizations. This article explains these concepts, KERI configuration mechanisms, and how to use them for real world, production configurations.
 
-**Disclaimer**: This article assumes intermediate familiarity with KERI concepts including identifiers (AIDs), witnesses, OOBIs, and the difference between KERIpy (the KERI implementation) and KERIA (the agent service).
+**Disclaimer**: This article assumes some basic familiarity with KERI concepts including identifiers (AIDs), witnesses, OOBIs, and the difference between KERIpy (the KERI implementation) and KERIA (the agent service). You should be able to follow along if you have some experience with KERIpy, the KLI, or KERIA and SignifyTS. If you are new to KERI and KERIA then go to the [vLEI Trainings](https://github.com/GLEIF-IT/vlei-trainings) repository and work through those trainings to have a proper introduction and then return to this configuration guide.
 
 ## Introduction: The Configuration Challenge
 
 Configuring KERIpy controllers and KERIA agents occurs at multiple levels:
 
+**Node Configuration**
 1. **Controller Configuration** (KERIpy) - How your local identifier finds witnesses and peers, and which ports it listens on, if any.
+  - This is also used as the basis for **verifier configuration** in components like [sally](https://github.com/GLEIF-IT/sally) or the [vLEI Verifier](https://github.com/GLEIF-IT/vlei-verifier).
 2. **Witness Configuration** (KERIpy) - The endpoints witnesses listen on
-3. **Mailbox Configuration** (KERIpy) - Where receipts and messages are delivered to
-4. **Agency Configuration** (KERIA) - Global settings for the KERIA service
-5. **Agent Configuration** (KERIA) - Per-agent settings within KERIA
+3. **Agency Configuration** (KERIA) - Global settings for the KERIA service
+4. **Agent Configuration** (KERIA) - Per-agent settings within KERIA
+5. **Mailbox Configuration** (KERIpy) - Where receipts and messages are delivered to
+
+**Content Hosting**
+6. **ACDC Schema Hosting** (KERIpy) - Hosting ACDC schemas for resolution by the OOBI URL resolution process.
+7. **ACDC Content Hosting** (KERIpy) - Hosting ACDC content for resolution by the OOBI URL resolution process.
+
+**Well Known Discovery Configuration**
+8. **Well-known URIs for Hosted Components** - `/.well-known/keri/oobi/` general discovery endpoints for KERI OOBIs, ACDC schemas and witness infrastructure
 
 Let's explore each, starting with file-based configuration and progressing to runtime endpoint role authorization.
 
 ## Part 1: KERIpy Controller Configuration
+
+Controller configuration applies to components like verifiers, such as the [sally][SALLY_REPO] verifier service that runs its own direct-mode listeners, or the KERIA service that listens on three ports.
 
 ### The Configer Class
 
@@ -71,6 +81,58 @@ Configuration files follow this structure:
 }
 ```
 
+
+### Example: Sally verifier - configuring listening endpoints
+
+The "sally" property of the JSON object corresponds to the `--alias` argument to `kli incept`. The `curls` section of the `sally` object tells the verifier which port to listen on.
+
+Located at your `config_dir/keri/cf/sally.json` you would find the following JSON. And the `sally.json` at the end of the path is really the `<alias>.json` where `alias` corresponds to the `--alias` argument to `kli incept`.
+```json
+{
+  "dt": "2022-10-31T12:59:57.823350+00:00",
+   "sally": {
+    "dt": "2022-01-20T12:57:59.823350+00:00",
+    "curls": ["http://127.0.0.1:9723/"]
+  },
+  "iurls": [],
+  "durls": [
+    "http://127.0.0.1:7723/oobi/EBNaNu-M9P5cgrnfl2Fvymy4E_jvxxyjb70PRtiANlJy",
+    "http://127.0.0.1:7723/oobi/EH6ekLjSr8V32WyFbGe1zXjTzFs9PkTYmupJ9H65O14g",
+    "http://127.0.0.1:7723/oobi/EKA57bKBKxr_kN7iN5i7lMUxpMG-s19dRcmov1iDxz-E",
+    "http://127.0.0.1:7723/oobi/ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY",
+    "http://127.0.0.1:7723/oobi/EBfdlu8R27Fbx-ehrqwImnK-8Cm79sqbAQ4MmvEAYqao",
+    "http://127.0.0.1:7723/oobi/EEy9PkikFcANV1l7EHukCeXqrzT1hNZjGlUk7wuMO5jw"
+  ]
+}
+```
+
+The `iurls` section is for witness OOBIs. The `durls` section is for data OOBIs, usually ACDC schemas or ACDC components. This example config does not have `wurls` for well knowns.
+
+### Example: KERIA agent server - configuring listening endpoints
+
+Similar to the Sally verifier, the `keria` property in the config corresponds to the value passed to the `--name` argument to `keria start` which defaults to `keria`.
+
+Again, you see the `curls` section for configuring the HTTP port used for listening to CESR transmissions to an agent. It has `iurls` and then KERIA-specific configuration for async loop repeat times, called "tocks."
+
+```json
+{
+  "dt": "2025-01-03T16:08:30.123456+00:00",
+  "keria": {
+    "dt": "2025-01-03T16:08:30.123457+00:00",
+    "curls": ["http://127.0.0.1:3902/"]
+  },
+  "iurls": [
+    "http://127.0.0.1:5642/oobi/BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha/controller?name=Wan&tag=witness",
+    "http://127.0.0.1:5643/oobi/BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM/controller?name=Wil&tag=witness",
+    "http://127.0.0.1:5644/oobi/BIKKuvBwpmDVA4Ds-EpL5bt9OqPzWPja2LigFYZN2YfX/controller?name=Wes&tag=witness"
+  ],
+  "tocks": {
+    "initer": 0.0,
+    "escrower": 1.0
+  }
+}
+```
+
 **Configuration URL Types:**
 
 - **`curls`** (Controller URLs): URLs + ports on which to set up either a TCP or HTTP port listener - where this controller can be reached
@@ -78,164 +140,6 @@ Configuration files follow this structure:
 - **`durls`** (Data URLs): OOBI URLs for static data like ACDC schemas or credentials
 - **`wurls`** (Well Known URLs): OOBI URLs specifically for well known components
 
-### Habery Configuration and Initialization
-
-The `Habery` class in `keri/app/habbing.py` manages the configuration lifecycle:
-
-```python
-class Habery:
-    def __init__(self, name="test", base="", bran=None, 
-                 ks=None, db=None, cf=None, temp=False, 
-                 salt=None, **kwa):
-        """
-        Parameters:
-            name: Database name differentiator
-            base: Additional path segment for hierarchy
-            bran: 21-character passcode for keystore encryption
-            ks: Optional pre-created Keeper (keystore)
-            db: Optional pre-created Baser (database)
-            cf: Optional pre-created Configer (config file)
-            temp: Use temporary directory (cleared on close)
-            salt: QB64 salt for deterministic key generation
-        """
-```
-
-Three initialization patterns exist:
-
-TODO really? Double check this. Maybe best to remove or condense this section.
-
-#### Pattern 1: Auto-initialization (Simplest)
-
-```python
-with habbing.openHby(name="test", temp=True) as hby:
-    hab = hby.makeHab(name="alice")
-    # Config file auto-created at ~/.keri/cf/test.json
-```
-
-#### Pattern 2: Pre-configured with File
-
-```python
-# Create config file first
-cf = configing.Configer(name="myconfig", base="mybase", temp=False)
-conf = {
-    "dt": help.nowIso8601(),
-    "iurls": ["http://127.0.0.1:5642/oobi/BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha/controller"],
-}
-cf.put(conf)
-
-# Pass to Habery
-hby = habbing.Habery(name="test", base="mybase", cf=cf, temp=False)
-```
-
-#### Pattern 3: Dependency Injection with Doers
-
-For production systems with managed lifecycles:
-
-```python
-ks = keeping.Keeper(name="test", temp=False)
-db = basing.Baser(name="test", temp=False)
-cf = configing.Configer(name="test", temp=False)
-
-# Configure
-conf = {
-    "dt": help.nowIso8601(),
-    "iurls": ["http://127.0.0.1:5642/oobi/BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha/controller"]
-}
-cf.put(conf)
-
-# Create Habery with injected dependencies
-hby = habbing.Habery(name="test", ks=ks, db=db, cf=cf, temp=False)
-
-# Wrap in Doers for lifecycle management
-doers = [
-    keeping.KeeperDoer(keeper=ks),
-    basing.BaserDoer(baser=db),
-    configing.ConfigerDoer(configer=cf),
-    habbing.HaberyDoer(habery=hby)
-]
-
-# Run with Doist
-doist = doing.Doist(limit=1.0, tock=0.03125, real=True)
-doist.do(doers=doers)
-```
-
-### The reconfigure Method
-
-Controllers can be reconfigured at runtime using `Habery.reconfigure()`:
-
-```python
-def reconfigure(self, name, temp=False, clear=False, **kwa):
-    """
-    Reconfigure Habery from its config file
-    
-    Reads configuration and processes:
-    - curls: Controller endpoint OOBIs
-    - iurls: Introduction OOBIs for witnesses/peers
-    - durls: Data OOBIs for schemas/credentials
-    
-    Creates endpoint role authorizations and location schemes
-    """
-```
-
-This method:
-
-1. Reads the config file via `self.cf.get()`
-2. Extracts any subsection matching the hab's name
-3. Processes `curls` to create controller endpoint role authorizations
-4. Processes `iurls` to resolve witness/peer OOBIs
-5. Processes `durls` to resolve data OOBIs
-6. Updates the database with endpoint and location records
-
-Example from `test_habbing.py`:
-
-```python
-# Setup Tam's config
-curls = ["tcp://localhost:5620/"]
-iurls = ["tcp://localhost:5621/?role=peer&name=nel"]
-conf = dict(
-    dt=help.nowIso8601(), 
-    tam=dict(dt=help.nowIso8601(), curls=curls), 
-    iurls=iurls
-)
-tamHby.cf.put(conf)
-
-# Create hab - automatically calls reconfigure
-tamHab = tamHby.makeHab(name="tam", isith='1', icount=3, 
-                        toad=2, wits=[wesHab.pre, wokHab.pre])
-
-# Verify configuration was applied
-ender = tamHab.db.ends.get(keys=(tamHab.pre, "controller", tamHab.pre))
-assert ender.allowed
-locer = tamHab.db.locs.get(keys=(tamHab.pre, kering.Schemes.tcp))
-assert locer.url == 'tcp://localhost:5620/'
-```
-
-### Namespaced Habs
-
-TODO Verify this. Really namespaced config? How so? Remove if not true.
-
-KERIpy supports namespace isolation for multiple identifiers:
-
-```python
-# Default namespace
-hab1 = hby.makeHab(name="alice")
-
-# Agent namespace
-hab2 = hby.makeHab(name="alice", ns="agent")
-
-# Controller namespace  
-hab3 = hby.makeHab(name="alice", ns="controller")
-
-# Each has separate config subsections
-conf = {
-    "dt": "...",
-    "alice": {"curls": [...]},  # Default namespace
-    "agent.alice": {"curls": [...]},  # Agent namespace
-    "controller.alice": {"curls": [...]}  # Controller namespace
-}
-```
-
-Configuration subsections use the format `{namespace}.{name}` or just `{name}` for the default namespace.
 
 ## Part 2: Witness Configuration
 
@@ -248,26 +152,25 @@ Witnesses need two types of configuration:
 1. **Controller endpoints** - Where the witness accepts events
 2. **Location schemes** - The URLs where the witness is reachable
 
-```python
-# Create witness hab (non-transferable)
-wesHab = wesHby.makeHab(name='wes', isith="1", icount=1, 
-                        transferable=False)
+In this case the `wan` configuration property corresponds to the `--alias` property passed to the `kli incept` or `kli witness start` command. A witness listens on both a TCP and an HTTP port, as shown in the `curls` section below. 
 
-# Configure witness endpoints
-msgs = bytearray()
-msgs.extend(wesHab.makeEndRole(
-    eid=wesHab.pre,
-    role=kering.Roles.controller,
-    stamp=helping.nowIso8601()
-))
-
-msgs.extend(wesHab.makeLocScheme(
-    url='http://127.0.0.1:8888',
-    scheme=kering.Schemes.http,
-    stamp=helping.nowIso8601()
-))
-
-wesHab.psr.parse(ims=bytearray(msgs))
+```json
+{
+  "dt": "2022-01-20T12:57:59.823350+00:00",
+  "wan": {
+    "dt": "2022-01-20T12:57:59.823350+00:00",
+    "curls": ["tcp://127.0.0.1:5632/", "http://127.0.0.1:5642/"]
+  },
+  "iurls": [
+    "http://127.0.0.1:5643/oobi/BLskRTInXnMxWaGqcpSyMgo0nYbalW99cGZESrz3zapM/controller?name=Wil&tag=witness"
+  ],
+  "durls": [
+    "http://127.0.0.1:7723/oobi/EBNaNu-M9P5cgrnfl2Fvymy4E_jvxxyjb70PRtiANlJy",
+  ],
+  "wurls": [
+    "http://127.0.0.1:7723/.well-known/keri/oobi/EPflJSbTCs2WKoGx4zIJ5OpOXHXuY0JE9et9ile2gMpv"
+  ]
+}
 ```
 
 ### Witness Discovery
@@ -277,12 +180,6 @@ Controllers discover witnesses through:
 1. **Configuration `iurls`**: Pre-configured witness OOBIs
 2. **OOBI resolution**: Resolving witness OOBIs at runtime
 3. **Well-known endpoints**: Using `.well-known/keri/oobi/` discovery
-
-When you specify witnesses during inception:
-
-```python
-hab = hby.makeHab(name='alice', wits=[wesHab.pre, wokHab.pre], toad=2)
-```
 
 The witnesses must have their endpoint role authorizations configured so the controller can find them.
 
@@ -455,7 +352,7 @@ agency = Agency(
 )
 ```
 
-The config file follows the same structure as KERIpy controller configs:
+AS shown earlier, the config file follows the same structure as KERIpy controller configs:
 
 ```json
 {
@@ -572,87 +469,6 @@ This creates a config file at `~/.keri/cf/{caid}.json` containing:
 }
 ```
 
-### Agent Creation Flow
-
-```python
-def create(self, caid, salt=None):
-    """Create new agent with configuration"""
-    habName = f"agent-{caid}"
-    ks = keeping.Keeper(name=caid, base=self.base, temp=self.temp, reopen=True)
-    agent_cf = self._writeAgentConfig(caid)  # Write agent config
-    
-    # Create Habery with agent config
-    agentHby = habbing.Habery(
-        name=caid,
-        base=self.base,
-        bran=self.bran,
-        ks=ks,
-        cf=agent_cf,  # Agent-specific config
-        temp=self.temp,
-        salt=salt
-    )
-    
-    # Create agent hab
-    agentHab = agentHby.makeHab(habName, ns="agent", 
-                                transferable=True, delpre=caid)
-    
-    agentRgy = Regery(hby=agentHby, name=agentHab.name, 
-                     base=self.base, temp=self.temp)
-    
-    agent = Agent(hby=agentHby, rgy=agentRgy, agentHab=agentHab, 
-                  caid=caid, agency=self)
-    
-    # Cache agent
-    self.agents[caid] = agent
-    self.extend([agent])
-    
-    return agent
-```
-
-### Agent Retrieval Flow
-
-When retrieving an existing agent:
-
-```python
-def get(self, caid):
-    """Retrieve agent (from cache or database)"""
-    # Check cache
-    if caid in self.agents:
-        agent = self.agents[caid]
-        agent.last = helping.nowUTC()
-        return agent
-    
-    # Load from database
-    aaid = self.adb.agnt.get(keys=(caid,))
-    if aaid is None:
-        return None
-    
-    ks = keeping.Keeper(name=caid, base=self.base, temp=self.temp, reopen=True)
-    
-    # Create Habery WITHOUT cf parameter
-    # Config is loaded from existing file
-    agentHby = habbing.Habery(
-        name=caid, 
-        base=self.base, 
-        bran=self.bran, 
-        ks=ks, 
-        temp=self.temp
-    )
-    
-    agentHab = agentHby.habByName(f"agent-{caid}", ns="agent")
-    
-    agentRgy = Regery(hby=agentHby, name=agentHab.name, 
-                     base=self.base, temp=self.temp)
-    
-    agent = Agent(hby=agentHby, rgy=agentRgy, agentHab=agentHab, 
-                  agency=self, caid=caid)
-    
-    self.agents[caid] = agent
-    self.extend([agent])
-    
-    return agent
-```
-
 ## Part 6: Endpoint Role Authorization at Runtime
 
 Beyond file-based configuration, KERI uses endpoint role authorization messages for dynamic configuration.
@@ -680,23 +496,25 @@ locSchemeMsg = hab.makeLocScheme(
 **Available Roles:**
 
 ```python
-class Roles:
-    witness = "witness"      # Witness service
-    controller = "controller"  # Controller service
-    agent = "agent"          # Agent service
-    mailbox = "mailbox"      # Mailbox service
-    peer = "peer"            # Peer service
-    watcher = "watcher"      # Watcher service
+Roles = Rolage(
+    controller='controller', 
+    witness='witness', 
+    registrar='registrar',
+    watcher='watcher', 
+    judge='judge', 
+    juror='juror', 
+    peer='peer', 
+    mailbox="mailbox", 
+    agent="agent")
 ```
 
 **Available Schemes:**
 
 ```python
-class Schemes:
-    http = "http"
-    https = "https"
-    tcp = "tcp"
-    udp = "udp"
+Schemes = Schemage(
+    tcp='tcp', 
+    http='http', 
+    https='https')
 ```
 
 ### Processing Endpoint Messages
@@ -899,7 +717,129 @@ PUT /config
 }
 ```
 
-## Part 8: Configuration Best Practices
+## Part 8: Well-Known OOBI Discovery
+
+Well-known URIs provide standardized discovery endpoints for KERI resources following [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615.html). GLEIF publishes production witness, AID, and schema OOBIs at `https://gleif-it.github.io/.well-known/keri/oobi/`.
+
+### Structure
+
+The well-known directory follows a hierarchical structure:
+
+```
+/.well-known/
+├── index.json                  # Main discovery index
+├── schema.json                 # JSON Schema for validation
+└── keri/oobi/
+    ├── index.json              # OOBI catalog (AIDs, witnesses, schemas)
+    ├── schema.json             # OOBI index schema
+    └── {identifier}/           # Per-identifier directories
+        └── index.json          # Resource content
+```
+
+### Discovery Protocol
+
+**Step 1**: Discover available resources
+
+```bash
+curl https://gleif-it.github.io/.well-known/keri/oobi/index.json
+```
+
+Returns:
+
+```json
+{
+  "$schema": "https://gleif-it.github.io/.well-known/keri/oobi/schema.json",
+  "aids": {
+    "GLEIF RoOT": "EDP1vHcw_wc4M__Fj53-cJaBnZZASd-aMTaSyWEQ-PC2",
+    "GLEIF External": "EINmHd5g7iV-UldkkkKyBIH052bIyxZNBn9pq-zNrYoS"
+  },
+  "witnesses": {
+    "BDkq35LUU63xnFmfhljYYRY0ymkCg7goyeCxN30tsvmS": "BDkq35LUU63xnFmfhljYYRY0ymkCg7goyeCxN30tsvmS"
+  },
+  "schemas": {
+    "LegalEntityvLEICredential": "ENPXp1vQzRF6JwIuS-mp2U8Uf1MoADoP_GqQ62VsDZWY"
+  }
+}
+```
+
+**Step 2**: Resolve specific identifier
+
+```bash
+# Get AID witness URLs
+curl https://gleif-it.github.io/.well-known/keri/oobi/EDP1vHcw_wc4M__Fj53-cJaBnZZASd-aMTaSyWEQ-PC2/index.json
+```
+
+Returns KERI `rpy` message with witness URLs:
+
+```json
+{
+  "v": "KERI10JSON000282_",
+  "t": "rpy",
+  "r": "/oobi/witness",
+  "a": {
+    "urls": [
+      "http://5.161.69.25:5623/oobi/EDP1vHcw_.../witness",
+      "http://51.161.130.60:5623/oobi/EDP1vHcw_.../witness"
+    ],
+    "aid": "EDP1vHcw_wc4M__Fj53-cJaBnZZASd-aMTaSyWEQ-PC2"
+  }
+}
+```
+
+### Resource Types
+
+Well-known endpoints serve three resource types:
+
+| Type | Prefix | Content | Content-Type |
+|------|--------|---------|--------------|
+| **AID** | `E` | KERI rpy message with witness URLs | `application/cesr` |
+| **Witness** | `B` | Witness KEL (icp + rpy messages) | `application/cesr` |
+| **Schema** | `E` | ACDC JSON Schema | `application/cesr` |
+
+### Configuration with wurls
+
+Use well-known URIs in configuration files:
+
+```json
+{
+  "dt": "2026-01-21T00:00:00.000000+00:00",
+  "wurls": [
+    "https://gleif-it.github.io/.well-known/keri/oobi/EDP1vHcw_wc4M__Fj53-cJaBnZZASd-aMTaSyWEQ-PC2"
+  ]
+}
+```
+
+The `wurls` field is processed by `Habery.reconfigure()` similar to `iurls` and `durls`.
+
+### Implementation
+
+The vLEI project includes a reference implementation in `src/vlei/app/well_known.py`:
+
+```python
+from vlei.app.well_known import loadWellKnownEnds
+import falcon
+
+app = falcon.App()
+oobi_dir = "./samples/oobis/.well-known/keri/oobi"
+loadWellKnownEnds(app, oobi_dir)
+```
+
+The handler:
+1. Loads `index.json` to categorize identifiers
+2. Routes requests based on identifier type (AID/witness/schema)
+3. Returns appropriate content with correct content-type headers
+
+Sample data from GLEIF's production well-known directory is available in `vLEI/samples/oobis/.well-known/` including 3 AIDs, 10 witnesses, and 8 vLEI credential schemas.
+
+### Benefits
+
+- **Standardized Discovery**: RFC 8615 compliant path structure
+- **No Authentication**: Public discovery endpoints
+- **Complete Resource Sets**: AIDs return all witness URLs in single response
+- **Schema Resolution**: Direct access to ACDC schemas without OOBI resolution
+- **Production Ready**: GLEIF operates this at scale for vLEI ecosystem
+
+## Part 9: Configuration Best Practices
 
 ### For KERIpy Controllers
 
@@ -939,31 +879,6 @@ PUT /config
    - Dynamic peer discovery
    - Schema updates
 
-### Configuration File Organization
-
-Recommended structure for multi-agent systems:
-
-```json
-{
-  "dt": "2026-01-21T00:00:00.000000+00:00",
-  
-  "keria": {
-    "dt": "2026-01-21T00:00:00.000000+00:00",
-    "curls": []
-  },
-  
-  "iurls": [
-    "http://witness1.example.com:5644/oobi/BBWmLeV...",
-    "http://witness2.example.com:5644/oobi/BN8t3n1...",
-    "http://watcher1.example.com:5645/oobi/BLFqR4t..."
-  ],
-  
-  "durls": [
-    "http://schemas.gleif.org/oobi/ENxQ5cL...",
-    "http://schemas.example.com/oobi/EKzW9jP..."
-  ]
-}
-```
 
 ## Conclusion
 
@@ -974,20 +889,22 @@ KERI configuration operates at multiple levels:
 3. **Mailbox Configuration**: Endpoint role authorization for agent/mailbox services
 4. **Agency Configuration**: Global KERIA service settings and OOBIs
 5. **Agent Configuration**: Per-controller settings derived from agency config
+6. **Well-Known Discovery**: RFC 8615 compliant `/.well-known/keri/oobi/` endpoints for standardized resource discovery
 
 Understanding these levels clarifies the apparent confusion about "no way to provide iurls except OOBIs." The truth is:
 
-- **KERIpy**: Multiple methods exist (file, OOBI, endpoint messages)
+- **KERIpy**: Multiple methods exist (file, OOBI, endpoint messages, well-known URIs)
 - **KERIA**: Agency provides global `iurls`, agents inherit them, runtime updates via OOBI resolution
 
-Both approaches ultimately create the same database records: endpoint role authorizations (`db.ends`) and location schemes (`db.locs`). The choice between file-based configuration and OOBI resolution depends on your use case: static vs. dynamic topology.
+Both approaches ultimately create the same database records: endpoint role authorizations (`db.ends`) and location schemes (`db.locs`). The choice between file-based configuration, OOBI resolution, and well-known discovery depends on your use case: static infrastructure, dynamic topology, or public discovery.
 
-For production KERIA deployments, use:
+For production deployments, use:
+- **Well-known URIs** for public discovery of organizational infrastructure
 - **Agency config file** for stable, shared witnesses and watchers
 - **OOBI resolution API** for dynamic peer discovery and new witnesses
 - **Endpoint role messages** for your own service availability
 
-This provides the flexibility to handle both static infrastructure and dynamic peer-to-peer discovery.
+This provides the flexibility to handle static infrastructure, dynamic peer-to-peer discovery, and standardized public resource publication.
 
 ## Further Reading
 
@@ -995,3 +912,7 @@ This provides the flexibility to handle both static infrastructure and dynamic p
 - [KERIA Agency and Agent Management](https://github.com/WebOfTrust/keria/blob/main/src/keria/app/agenting.py)
 - [KERI Endpoint Role Authorization Specification](https://github.com/WebOfTrust/keripy/blob/main/src/keri/core/coring.py)
 - [OOBI Specification](https://github.com/WebOfTrust/keripy/blob/main/src/keri/app/oobiing.py)
+- [GLEIF Well-Known URI Structure Specification](https://github.com/GLEIF-IT/GLEIF-IT.github.io/blob/main/.well-known/STRUCTURE.md)
+- [GLEIF Well-Known Schema Specification](https://github.com/GLEIF-IT/GLEIF-IT.github.io/blob/main/.well-known/SCHEMA.md)
+- [GLEIF Production Well-Known Directory](https://gleif-it.github.io/.well-known/)
+- [RFC 8615: Well-Known URIs](https://www.rfc-editor.org/rfc/rfc8615.html)

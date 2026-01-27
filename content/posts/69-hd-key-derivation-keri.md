@@ -1,7 +1,7 @@
 +++
 title = "Hierarchical Deterministic Key Derivation in KERI: A Deep Dive into SaltyCreator"
 slug = "keri-hd-key-derivation-deep-dive"
-date = "2026-01-22"
+date = "2026-01-24"
 
 [taxonomies]
 tags = ["keri", "keripy", "keria", "signify", "signify-ts", "cryptography", "key-management", "key derivation"]
