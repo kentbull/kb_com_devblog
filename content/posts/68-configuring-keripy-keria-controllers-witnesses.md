@@ -41,6 +41,25 @@ Let's explore each, starting with file-based configuration and progressing to ru
 
 Controller configuration applies to components like verifiers, such as the [sally][SALLY_REPO] verifier service that runs its own direct-mode listeners, or the KERIA service that listens on three ports.
 
+You specify a configuration file with the `kli init` command like so:
+
+```bash
+kli init \
+  --name my_aid_ks \
+  --salt 0ACDEyMzQ1Njc4OWxtbm9aBc \
+  --passcode 0ADDZyMzQ1Njc99Wxtbm7ssE \
+  --config-dir "<directory-containing-config-tree>" \
+  --config-file demo-witness-oobis
+```
+
+and in your config directory you would need to hav the following directory tree:
+```text
+config-dir\
+  - keri\
+    - cf\
+      - demo-witness-oobis.json
+```
+
 ### The Configer Class
 
 At the heart of KERIpy configuration is the `Configer` class in `keri/app/configing.py`. It's a specialized file handler supporting four serialization formats:
