@@ -192,6 +192,40 @@ In this case the `wan` configuration property corresponds to the `--alias` prope
 }
 ```
 
+### Configuring Witness Endpoints with KLI
+
+After starting a witness with `kli witness demo`, configure its endpoint roles and location:
+
+**Add witness endpoint role:**
+
+```bash
+kli ends add \
+  --name wan \
+  --alias wan \
+  --role witness \
+  --eid BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha
+```
+
+**Add location schemes for both TCP and HTTP:**
+
+```bash
+# TCP location
+kli loc add \
+  --name wan \
+  --alias wan \
+  --eid BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha \
+  --scheme tcp \
+  --url tcp://127.0.0.1:5632/
+
+# HTTP location
+kli loc add \
+  --name wan \
+  --alias wan \
+  --eid BBilc4-L3tFUnfM_wJr4S4OJanAv_VmF_dJNN6vkf2Ha \
+  --scheme http \
+  --url http://127.0.0.1:5642/
+```
+
 ### Witness Discovery
 
 Controllers discover witnesses through:
@@ -246,7 +280,95 @@ agentHab.psr.parse(ims=bytearray(msgs))
 hab.psr.parse(ims=bytearray(msgs))  # Controller processes too
 ```
 
-### Querying Endpoints
+### Adding Endpoint Roles with KLI
+
+The KLI provides commands to add endpoint roles without writing Python code:
+
+**Add a controller endpoint role:**
+
+```bash
+kli ends add \
+  --name alice \
+  --alias alice \
+  --role controller \
+  --eid EBErgFZ...
+```
+
+**Add a witness endpoint role:**
+
+```bash
+kli ends add \
+  --name alice \
+  --alias alice \
+  --role witness \
+  --eid BN8t3n1...
+```
+
+**Add an agent/mailbox endpoint role:**
+
+```bash
+kli ends add \
+  --name alice \
+  --alias alice \
+  --role agent \
+  --eid EBErgFZ...
+
+kli ends add \
+  --name alice \
+  --alias alice \
+  --role mailbox \
+  --eid EBErgFZ...
+```
+
+**Add a location scheme for an endpoint:**
+
+```bash
+kli loc add \
+  --name alice \
+  --alias alice \
+  --eid EBErgFZ... \
+  --scheme http \
+  --url http://127.0.0.1:6666
+```
+
+### Querying Endpoints with KLI
+
+Query configured endpoints for an identifier:
+
+```bash
+kli ends list \
+  --name alice \
+  --alias alice
+```
+
+Output shows all endpoint roles and their locations:
+
+```json
+{
+  "agent": {
+    "EBErgFZ...": {
+      "http": "http://127.0.0.1:6666"
+    }
+  },
+  "controller": {
+    "EGadHcy...": {
+      "http": "http://127.0.0.1:7777"
+    }
+  },
+  "mailbox": {
+    "EBErgFZ...": {
+      "http": "http://127.0.0.1:6666"
+    }
+  },
+  "witness": {
+    "BN8t3n1...": {
+      "http": "http://127.0.0.1:8888"
+    }
+  }
+}
+```
+
+### Querying Endpoints Programmatically
 
 Controllers can query their configured endpoints:
 
@@ -536,7 +658,58 @@ Schemes = Schemage(
     https='https')
 ```
 
-### Processing Endpoint Messages
+### Adding Endpoint Roles with KLI
+
+Instead of writing Python code, use KLI commands to add endpoint roles and locations:
+
+**Add a controller endpoint role:**
+
+```bash
+kli ends add \
+  --name alice \
+  --alias alice \
+  --role controller \
+  --eid EGadHcy...
+```
+
+**Add the corresponding location:**
+
+```bash
+kli loc add \
+  --name alice \
+  --alias alice \
+  --eid EGadHcy... \
+  --scheme http \
+  --url http://127.0.0.1:7777
+```
+
+**Add multiple roles for the same endpoint:**
+
+```bash
+# Agent role
+kli ends add \
+  --name alice \
+  --alias alice \
+  --role agent \
+  --eid EBErgFZ...
+
+# Mailbox role
+kli ends add \
+  --name alice \
+  --alias alice \
+  --role mailbox \
+  --eid EBErgFZ...
+
+# Location (shared by both roles)
+kli loc add \
+  --name alice \
+  --alias alice \
+  --eid EBErgFZ... \
+  --scheme http \
+  --url http://127.0.0.1:6666
+```
+
+### Processing Endpoint Messages Programmatically
 
 These messages are parsed into the database:
 
@@ -650,6 +823,31 @@ hab.db.oobis.pin(keys=(oobi,), val=obr)
 # OOBI resolver processes in background
 ```
 
+**Method 4**: KLI commands for endpoint roles
+
+```bash
+# Add controller endpoint role
+kli ends add \
+  --name alice \
+  --alias alice \
+  --role controller \
+  --eid EGadHcy...
+
+# Add location
+kli loc add \
+  --name alice \
+  --alias alice \
+  --eid EGadHcy... \
+  --scheme http \
+  --url http://localhost:7723/oobi/controller
+
+# Resolve witness OOBI
+kli oobi resolve \
+  --name alice \
+  --oobi-alias witness1 \
+  --oobi http://localhost:5644/oobi/witness1
+```
+
 ### Q: "Is there a good example of running the controller server?"
 
 **Answer**: KERIA provides the production pattern:
@@ -713,7 +911,9 @@ doist.do(doers=[agency])
 **In KERIA**: The agency configuration provides global `iurls` and `durls` that are inherited by all agents. However:
 
 - **Limitation**: Currently no API endpoint to add agent-specific `curls`/`iurls`/`durls` after agent creation
-- **Workaround**: Resolve OOBIs through the `/oobis` endpoint:
+- **Workaround**: Resolve OOBIs through the `/oobis` endpoint or KLI:
+
+**Via KERIA API:**
 
 ```bash
 POST /identifiers/{alias}/oobis
@@ -723,7 +923,17 @@ POST /identifiers/{alias}/oobis
 }
 ```
 
-This triggers OOBI resolution which creates the same endpoint records as file-based configuration.
+**Via KLI:**
+
+```bash
+kli oobi resolve \
+  --name alice \
+  --alias alice \
+  --oobi-alias my-witness \
+  --oobi http://localhost:5644/oobi/witness1
+```
+
+Both methods trigger OOBI resolution which creates the same endpoint records as file-based configuration.
 
 **Improvement Opportunity**: As Daniel noted, adding an API to modify agent configuration would be valuable:
 
