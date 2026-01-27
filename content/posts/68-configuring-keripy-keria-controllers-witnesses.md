@@ -935,3 +935,5 @@ This provides the flexibility to handle static infrastructure, dynamic peer-to-p
 - [GLEIF Well-Known Schema Specification](https://github.com/GLEIF-IT/GLEIF-IT.github.io/blob/main/.well-known/SCHEMA.md)
 - [GLEIF Production Well-Known Directory](https://gleif-it.github.io/.well-known/)
 - [RFC 8615: Well-Known URIs](https://www.rfc-editor.org/rfc/rfc8615.html)
+
+[SALLY_REPO]: https://github.com/GLEIF-IT/sally
