@@ -75,6 +75,12 @@ KERI uses two related but distinct key derivation processes, one for the encrypt
 
 **Key insight:** The user's passcode (bran) is **never** used directly for AID key derivation. It only creates the AEID used to encrypt/decrypt the keystore salt. The actual AID keys come from the keystore salt combined with derivation paths.
 
+### Note on KERIpy vs Signify
+
+Both KERIpy and Signify+KERIA use a similar key derivation algorithm yet Signify differs in one regard. KERIpy uses the user-input bran only as an encryption key (`aeid`) whereas Signify uses the user-input bran both as the encryption key (`aeid`) and as the salt for the Signify Controller AID. A separate blog post will dive deep into the Signify architecture, though for this post it is sufficient to know that Signify differs from KERIpy only in how the `aeid` encryption key is used. 
+
+Both KERIpy and SignifyTS perform key generation for identifiers based on a root cryptographic salt that is encrypted by the `aeid`. It's just that for Signify then the "bran" used for the `aeid` key is also used for the Signify Controller AID, the identifier that delegates to the KERIA Agent used by that controller.
+
 ## The Bran: Master Secret and encryption key
 
 The "bran" is a subset (up to the first 21 chars) of the user-provided "passcode" string along with the "0AA" prefix explained below. The user-provided portion of the bran is often labeled as "passcode" in the KERI ecosystem. While the bran is your master secret, it does **not** directly derive AID keys. Instead, it creates the AEID (Authentication and Encryption ID) used to protect the keystore salt, which in turn derives the actual AID keys.
