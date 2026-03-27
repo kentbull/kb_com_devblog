@@ -21,6 +21,7 @@ How do you configure, publish, discover, and connect KERI components? Whether wi
 Configuring KERIpy controllers and KERIA agents occurs at multiple levels:
 
 **Node Configuration**
+
 1. **Controller Configuration** (KERIpy) - How your local identifier finds witnesses and peers, and which ports it listens on, if any.
   - This is also used as the basis for **verifier configuration** in components like [sally](https://github.com/GLEIF-IT/sally) or the [vLEI Verifier](https://github.com/GLEIF-IT/vlei-verifier).
 2. **Witness Configuration** (KERIpy) - The endpoints witnesses listen on
@@ -28,11 +29,13 @@ Configuring KERIpy controllers and KERIA agents occurs at multiple levels:
 4. **Agent Configuration** (KERIA) - Per-agent settings within KERIA
 5. **Mailbox Configuration** (KERIpy) - Where receipts and messages are delivered to
 
-**Content Hosting**
+**Content Hosting Configuration**
+
 6. **ACDC Schema Hosting** (KERIpy) - Hosting ACDC schemas for resolution by the OOBI URL resolution process.
 7. **ACDC Content Hosting** (KERIpy) - Hosting ACDC content for resolution by the OOBI URL resolution process.
 
 **Well Known Discovery Configuration**
+
 8. **Well-known URIs for Hosted Components** - `/.well-known/keri/oobi/` general discovery endpoints for KERI OOBIs, ACDC schemas and witness infrastructure
 
 Let's explore each, starting with file-based configuration and progressing to runtime endpoint role authorization.
