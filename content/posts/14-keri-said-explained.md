@@ -295,7 +295,7 @@ The Human Colossus Foundation has a Rust implementation with WASM bindings for t
 
 ### SAIDify TypeScript
 
-If you want to use a Typescript library you can use the [SAIDify library](https://github.com/psteniern/saidify).
+If you want to use a Typescript library you can use the [SAIDify library](https://github.com/kentbull/saidify).
 
 ```typescript
 import { saidify, verify } from 'saidify'
