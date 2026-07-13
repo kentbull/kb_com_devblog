@@ -16,6 +16,12 @@ How do you configure, publish, discover, and connect KERI components? Whether wi
 
 **Disclaimer**: This article assumes some basic familiarity with KERI concepts including identifiers (AIDs), witnesses, OOBIs, and the difference between KERIpy (the KERI implementation) and KERIA (the agent service). You should be able to follow along if you have some experience with KERIpy, the KLI, or KERIA and SignifyTS. If you are new to KERI and KERIA then go to the [vLEI Trainings](https://github.com/GLEIF-IT/vlei-trainings) repository and work through those trainings to have a proper introduction and then return to this configuration guide.
 
+**Source review update, July 2026**: The KERIA tock and escrow sections below
+were checked against the KERIA 0.4.1 development source with KERIpy 1.2.13 and
+against the current KERIpy development source. KERIA 0.3.0 with KERIpy 1.2.6
+has the same central tock wiring and the same indefinitely retried multisig
+escrow families described here.
+
 ## Introduction: The Configuration Challenge
 
 Configuring KERIpy controllers and KERIA agents occurs at multiple levels:
@@ -154,6 +160,172 @@ Again, you see the `curls` section for configuring the HTTP port used for listen
   }
 }
 ```
+
+### What KERIA tocks actually configure
+
+A **tock is a scheduler interval, not an escrow timeout**. It controls how soon
+an HIO task is eligible to run again. It does not determine how old an escrow
+record may become before KERIA discards it.
+
+KERIA's root `Doist` uses a fixed `0.03125`-second cycle. A task with a tock of
+`0.0` is therefore eligible on every scheduler cycle—up to roughly 32 cycles per
+second when the process has enough capacity. A task with a tock of `1.0` is
+eligible about once per second.
+
+This matters because every missing KERIA Agent tock defaults to `0.0`. If
+`tocks.escrower` is absent, misspelled, or unavailable because the configuration
+did not load, KERIA may run its complete central escrow pass on every root
+scheduler cycle.
+
+KERIA recognizes the following exact, case-sensitive keys:
+
+| Config key       | Task              | What its interval controls                                                                  |
+|------------------|-------------------|---------------------------------------------------------------------------------------------|
+| `initer`         | `Initer`          | One-time agent readiness and logging check.                                                 |
+| `querier`        | `Querier`         | Parent queue for key-state queries. Spawned query tasks retain their own scheduling.        |
+| `escrower`       | `Escrower`        | Central KEL, TEL, reply, EXN, credential-verifier, registrar, and credentialer escrow pass. |
+| `parser`         | `ParserDoer`      | Processing of incoming CESR messages.                                                       |
+| `witnesser`      | `Witnesser`       | Witness receipt and catch-up request queue.                                                 |
+| `delegator`      | `Delegator`       | Queue that starts delegation work; not the internal delegation escrow loop.                 |
+| `exchangeSender` | `ExchangeSender`  | Parent queue for sending EXN messages.                                                      |
+| `granter`        | `Granter`         | IPEX grant queue and the `GrantDoer` tasks it creates.                                      |
+| `admitter`       | `Admitter`        | IPEX admit queue.                                                                           |
+| `groupRequester` | `GroupRequester`  | Queue that starts multisig Counselor work; not the Counselor escrow loop.                   |
+| `seeker`         | `SeekerDoer`      | Credential indexing cues.                                                                   |
+| `exchangecue`    | `ExchangeCueDoer` | EXN indexing and query cues.                                                                |
+
+Unknown keys are ignored. Missing known keys become `0.0`. KERIA currently does
+not validate these names or expose the effective tock mapping from `GET /config`,
+so spelling errors can silently change scheduling behavior.
+
+Do not set every task to `1.0` merely because that is appropriate for the
+central escrow scan. Parser, witness, query, and message-delivery latency have
+different requirements. The defensible production baseline from the KERIA
+source is to set the central escrow interval explicitly:
+
+```json
+"tocks": {
+  "initer": 0.0,
+  "escrower": 1.0
+}
+```
+
+Increasing `escrower` can reduce CPU spent rescanning retained records, but it
+also increases retry latency. It does not limit escrow size or expire stuck
+records.
+
+### What the central Escrower processes
+
+Each central `Escrower` pass invokes all of these processors:
+
+1. KERIpy `Kevery` core KEL and receipt escrows
+2. KERIpy delegable-event escrow processing
+3. KERIpy `Regery` local TEL escrows
+4. KERIpy `Revery` reply escrows
+5. KERIpy `Tevery` non-local TEL escrows
+6. KERIpy `Exchanger` partially signed EXN escrows
+7. KERIpy credential `Verifier` dependency escrows
+8. KERIA registry and credential `Registrar` escrows
+9. KERIA credential-completion escrows
+
+The single `escrower` tock retimes this entire group. It does **not** retime two
+important escrow processors:
+
+- KERIpy's multisig `Counselor` scans group partially signed, delegated, and
+  partially witnessed escrows every `0.5` seconds.
+- KERIA's delegation `Anchorer` scans delegated partial-witness and unanchored
+  escrows every `0.5` seconds.
+
+`groupRequester` and `delegator` only control the queues that start work. They
+do not control those internal escrow scans.
+
+### Escrow retry interval versus escrow lifetime
+
+Many low-level KERIpy escrows do have age checks. In KERIpy 1.2.13,
+the important defaults include:
+
+| Escrow family                                            | Default lifetime |
+|----------------------------------------------------------|------------------|
+| KEL out-of-order events                                  | 1,200 seconds    |
+| KEL partial signatures, witness receipts, and delegation | 3,600 seconds    |
+| Unverified receipts and likely-duplicitous events        | 3,600 seconds    |
+| Query-not-found                                          | 300 seconds      |
+| Reply messages                                           | 3,600 seconds    |
+| Partially signed EXN messages                            | 20 seconds       |
+| Credential dependency verification                       | 3,600 seconds    |
+| Transaction-state broker escrows                         | 3,600 seconds    |
+
+Other important escrow families have **no age-based timeout**:
+
+| Escrow family                          | Tables                 | Retry behavior                                                            |
+|----------------------------------------|------------------------|---------------------------------------------------------------------------|
+| Group multisig Counselor               | `gpse`, `gdee`, `gpwe` | Full scan every 0.5 seconds until protocol completion or manual clearing. |
+| KERIA delegation Anchorer              | `dpwe`, `dune`         | Full scan every 0.5 seconds until completion or manual clearing.          |
+| TEL out-of-order and anchorless events | `oots`, `taes`         | Retried by `Tevery` without an age check.                                 |
+| KERIA registry workflow                | `tpwe`, `tmse`, `tede` | Retried at the configured central `escrower` cadence.                     |
+| KERIA credential completion            | `cmse`                 | Retried at the configured central `escrower` cadence.                     |
+
+Here, "manual clearing" describes a storage-level possibility, not a supported
+general KERIA administration workflow. The generic KERIpy escrow commands can
+reach the Baser-side group and delegation tables, but they do not correctly
+open the KERIA Reger that contains the TEL, registry, and credential tables.
+
+This distinction is operationally important. A failed multisig operation can
+remain in one of these tables indefinitely. Every scan touches it again. As the
+tables grow, repeated scans consume CPU; because LMDB is memory-mapped, touching
+more database pages can also increase resident memory.
+
+### Agency config versus persisted per-agent config
+
+KERIA copies the agency configuration into a separate configuration file when
+it creates each Signify controller's agent. The per-agent configuration is named
+with the Signify controller AID and is loaded again when that agent reopens.
+
+Changing the agency's `keria.json` does not rewrite existing per-agent files.
+This means adding `"escrower": 1.0` to the deployment template fixes newly
+created agents but may leave existing agents running their older persisted
+configuration. Inspect and migrate the persisted per-agent files when changing
+tocks for an existing deployment.
+
+### Inspecting and clearing KERIA escrows
+
+KERIA itself does not currently provide a general escrow administration API.
+`GET /escrows/rpy` is read-only and covers reply escrows only. Deleting a
+long-running operation or notification does not clear protocol escrows.
+
+The underlying KERIpy version includes `kli escrow list` and
+`kli escrow clear`, but these are generic Habery maintenance commands, not
+KERIA-aware escrow administration tools.
+
+For the KERIA versions reviewed, the commands can open an Agent's KEL `Baser`
+when `--name` is the Signify controller AID and `--base` matches KERIA's base.
+They do not correctly open that Agent's TEL and credential `Reger`. KERIA names
+the Reger `agent-<controller-aid>` and places it under the configured base,
+whereas KERIpy 1.2.12 and 1.2.13 derive the Reger name from the Habery name and
+omit the base.
+
+Consequently:
+
+- `kli escrow list` may accurately report Baser-side KEL, multisig,
+  delegation, reply, and EXN escrows while reporting empty or unrelated TEL,
+  registry, and credential escrows.
+- Running `list` may create an empty Reger at the incorrectly derived path.
+- `kli escrow clear` must not be described as clearing all of a KERIA Agent's
+  escrows. In KERIpy 1.2.12 and 1.2.13 it clears the real Baser but not the real
+  KERIA Reger. Current KERIpy development clears only the Baser.
+
+Do not use either command as proof that a KERIA Agent has no remaining escrows,
+and do not recommend `kli escrow clear` as a complete KERIA recovery procedure.
+If Baser-side maintenance is deliberately required, stop KERIA, snapshot the
+complete volume, and test against a restored copy. Accessing or clearing the
+actual KERIA Reger requires version-specific tooling that uses the exact KERIA
+Reger name and base; KERIA currently provides no supported general-purpose API
+or CLI for that operation.
+
+The long-term production fix is not merely a larger tock or a periodic blanket
+clear. KERIA needs per-family metrics, oldest-record ages, bounded scan batches,
+and protocol-aware quarantine or expiry for escrow families that currently
+retry forever.
 
 **Configuration URL Types:**
 
@@ -1022,11 +1194,11 @@ Returns KERI `rpy` message with witness URLs:
 
 Well-known endpoints serve three resource types:
 
-| Type | Prefix | Content | Content-Type |
-|------|--------|---------|--------------|
-| **AID** | `E` | KERI rpy message with witness URLs | `application/cesr` |
-| **Witness** | `B` | Witness KEL (icp + rpy messages) | `application/cesr` |
-| **Schema** | `E` | ACDC JSON Schema | `application/cesr` |
+| Type        | Prefix | Content                            | Content-Type       |
+|-------------|--------|------------------------------------|--------------------|
+| **AID**     | `E`    | KERI rpy message with witness URLs | `application/cesr` |
+| **Witness** | `B`    | Witness KEL (icp + rpy messages)   | `application/cesr` |
+| **Schema**  | `E`    | ACDC JSON Schema                   | `application/cesr` |
 
 ### Configuration with wurls
 
